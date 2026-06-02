@@ -472,6 +472,31 @@ nav button.active {
   margin-top: 2px;
 }
 
+.batt-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+.batt-strategy-note {
+  font-size: 0.73rem;
+  color: var(--text-muted);
+  margin-top: 10px;
+  line-height: 1.5;
+}
+.batt-solar-info {
+  background: rgba(96,165,250,0.08);
+  border: 1px solid rgba(96,165,250,0.25);
+  border-radius: 8px;
+  color: #93c5fd;
+  font-size: 0.73rem;
+  line-height: 1.5;
+  margin-top: 10px;
+  padding: 8px 12px;
+}
+
 .ac-divider {
   border-top: 1px dashed var(--border);
   margin: 6px 0;

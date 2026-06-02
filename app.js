@@ -28,7 +28,7 @@ const GEN = {
   prop: { running: 2600, peak: 3500 },
 };
 
-// ── Battery charging load by state ────────────────────────────────────────────
+// ── Battery charging load by state (only applied when strategy = generator) ───
 const BATTERY_LOAD = { full: 0, partial: 300, heavy: 700 };
 
 // ── Fuel burn reference data (from WEN specs / Home Depot listing) ────────────
@@ -95,10 +95,11 @@ const BUILT_IN_PRESETS = [
 const state = {
   appliances: Object.fromEntries(APPLIANCES.map(a => [a.id, a.on])),
   battery: 'full',
+  chargeStrategy: 'solar', // 'solar' | 'generator'
   elevation: 1400,
   tests: [],
   userPresets: [],
-  hiddenBuiltIns: [],   // IDs of built-in presets the user has hidden
+  hiddenBuiltIns: [],
   activePresetId: 'normal-ac',
 };
 
@@ -107,7 +108,8 @@ function loadState() {
   try {
     const saved = JSON.parse(localStorage.getItem('camperPowerState') || '{}');
     if (saved.appliances)  Object.assign(state.appliances, saved.appliances);
-    if (saved.battery)     state.battery = saved.battery;
+    if (saved.battery)        state.battery = saved.battery;
+    if (saved.chargeStrategy) state.chargeStrategy = saved.chargeStrategy;
     if (saved.elevation != null) state.elevation = saved.elevation;
     if (saved.tests)       state.tests = saved.tests;
     if (saved.userPresets)    state.userPresets = saved.userPresets;
@@ -120,6 +122,7 @@ function saveState() {
   localStorage.setItem('camperPowerState', JSON.stringify({
     appliances: state.appliances,
     battery: state.battery,
+    chargeStrategy: state.chargeStrategy,
     elevation: state.elevation,
     tests: state.tests,
     userPresets: state.userPresets,
@@ -138,7 +141,7 @@ function calcLoads() {
       if (a.surge > maxSurge) maxSurge = a.surge;
     }
   }
-  const battLoad = BATTERY_LOAD[state.battery];
+  const battLoad = state.chargeStrategy === 'generator' ? BATTERY_LOAD[state.battery] : 0;
   running += battLoad;
   const peak = running + maxSurge;
   return { running, maxSurge, peak, battLoad };
@@ -214,10 +217,27 @@ function renderCalculator() {
       : `${state.elevation.toLocaleString()} ft (−${deratePct}%)`;
   }
 
-  // Battery state collapsed summary
-  const battLabels = { full: 'Full (+0W)', partial: 'Partial (+300W)', heavy: 'Heavy (+700W)' };
+  // Battery section collapsed summary
+  const battStateLabels = { full: 'Full', partial: 'Partial', heavy: 'Heavy' };
+  const stratLabel = state.chargeStrategy === 'generator' ? 'Generator Assist' : 'Solar Only';
+  const addedW = state.chargeStrategy === 'generator' ? BATTERY_LOAD[state.battery] : 0;
   const battSummary = document.getElementById('summary-batt');
-  if (battSummary) battSummary.textContent = battLabels[state.battery];
+  if (battSummary) battSummary.textContent =
+    `${battStateLabels[state.battery]} · ${stratLabel}${addedW > 0 ? ` (+${addedW}W)` : ''}`;
+
+  // Strategy explanatory note
+  const stratNote = document.getElementById('batt-strategy-note');
+  if (stratNote) {
+    stratNote.textContent = state.chargeStrategy === 'solar'
+      ? 'Solar Only: the 300W solar panel is expected to maintain/recover the batteries. No extra generator charging load is added.'
+      : 'Generator Assist: estimated converter charging load is added to the generator total. Use this when intentionally recovering batteries after clouds or heavy use.';
+  }
+  // Info note when partial/heavy + solar
+  const solarInfo = document.getElementById('batt-solar-info');
+  if (solarInfo) {
+    solarInfo.style.display =
+      (state.chargeStrategy === 'solar' && state.battery !== 'full') ? 'block' : 'none';
+  }
 
   // Gas status
   const gasBadge = document.getElementById('gas-badge');
@@ -406,7 +426,7 @@ function buildCalculatorHTML() {
       </div>
     </div>
 
-    <!-- Battery State -->
+    <!-- Battery Charge State + Charging Strategy -->
     <div class="card collapsible-card">
       <h2 class="collapsible-heading" onclick="toggleSection('batt-body', this)">
         <span>Battery Charge State</span>
@@ -414,19 +434,33 @@ function buildCalculatorHTML() {
         <span class="collapse-icon">▸</span>
       </h2>
       <div id="batt-body" style="display:none">
-        <p style="font-size:0.75rem;color:var(--text-muted);margin-bottom:8px;">
-          Estimates converter charging load added to generator while running.
-        </p>
+
+        <p class="batt-label">Battery State</p>
         <div class="battery-selector">
           <button class="battery-btn ${state.battery === 'full' ? 'active' : ''}" onclick="setBattery('full')">
-            Full <span class="battery-sub">+0W</span>
+            Full
           </button>
           <button class="battery-btn ${state.battery === 'partial' ? 'active' : ''}" onclick="setBattery('partial')">
-            Partial <span class="battery-sub">+300W</span>
+            Partial
           </button>
           <button class="battery-btn ${state.battery === 'heavy' ? 'active' : ''}" onclick="setBattery('heavy')">
-            Heavy <span class="battery-sub">+700W</span>
+            Heavy
           </button>
+        </div>
+
+        <p class="batt-label" style="margin-top:14px;">Charging Strategy</p>
+        <div class="battery-selector">
+          <button class="battery-btn ${state.chargeStrategy === 'solar' ? 'active' : ''}" onclick="setChargeStrategy('solar')">
+            ☀️ Solar Only
+          </button>
+          <button class="battery-btn ${state.chargeStrategy === 'generator' ? 'active' : ''}" onclick="setChargeStrategy('generator')">
+            ⚡ Generator Assist
+          </button>
+        </div>
+
+        <div id="batt-strategy-note" class="batt-strategy-note"></div>
+        <div id="batt-solar-info" class="batt-solar-info" style="display:none">
+          ℹ️ Battery is not full, but generator charging load is not included because Solar Only is selected.
         </div>
       </div>
     </div>
@@ -561,6 +595,19 @@ function setBattery(level) {
   document.querySelectorAll('.battery-btn').forEach((btn, i) => {
     btn.classList.toggle('active', ['full','partial','heavy'][i] === level);
   });
+  saveState();
+  renderCalculator();
+}
+
+function setChargeStrategy(strategy) {
+  state.chargeStrategy = strategy;
+  // Sync the two strategy buttons (they follow the battery-selector pattern)
+  const btns = document.querySelectorAll('#batt-body .battery-btn');
+  // First 3 are battery state, last 2 are strategy
+  if (btns.length >= 5) {
+    btns[3].classList.toggle('active', strategy === 'solar');
+    btns[4].classList.toggle('active', strategy === 'generator');
+  }
   saveState();
   renderCalculator();
 }
@@ -828,9 +875,9 @@ function buildAboutHTML() {
         <h3>Key Assumptions</h3>
         <ul class="guidance-list">
           <li><span>⚡</span><span>Micro-Air EasyStart reduces A/C <em>startup surge only</em> — running watts remain ~1,700W when the compressor is active.</span></li>
-          <li><span>🔋</span><span>The 300W solar panel reduces battery charging demand on the generator but is not counted as generator output.</span></li>
+          <li><span>☀️</span><span>Solar Only (default): the 300W roof solar panel is expected to maintain/recover the batteries. No generator charging load is added regardless of battery state.</span></li>
+          <li><span>⚡</span><span>Generator Assist: adds estimated converter charging load when intentionally using the generator to recover batteries after extended clouds or heavy discharge. Partial = +300W, Heavy = +700W.</span></li>
           <li><span>🌙</span><span>Starlink overnight is fine when the generator is running — generator/converter power the 12V system so battery drain is minimal.</span></li>
-          <li><span>🔌</span><span>Battery state adds estimated converter charging load while generator is running. Full = 0W, Partial = 300W, Heavy = 700W.</span></li>
           <li><span>⚠️</span><span>Peak load = selected running load + <em>largest single</em> startup surge (appliances don't all surge simultaneously).</span></li>
           <li><span>🔋</span><span>Flooded lead-acid batteries should not be deeply discharged regularly — try to keep them above 50% (68Ah used of 136Ah).</span></li>
           <li><span>📊</span><span>Good = running ≤85% of capacity and peak ≤ peak rating. Near Limit = running 85–100%. Over Limit = either threshold exceeded.</span></li>
@@ -1006,6 +1053,7 @@ window.collapseAll = collapseAll;
 window.setElevation = setElevation;
 window.setElevationPreset = setElevationPreset;
 window.setBattery = setBattery;
+window.setChargeStrategy = setChargeStrategy;
 window.addTest = addTest;
 window.deleteTest = deleteTest;
 window.updateTest = updateTest;
@@ -1027,6 +1075,7 @@ document.addEventListener('DOMContentLoaded', () => {
   if (defaultPreset) {
     Object.assign(state.appliances, defaultPreset.appliances);
     state.battery = 'full';
+    state.chargeStrategy = 'solar';
     state.elevation = defaultPreset.elevation;
     state.activePresetId = 'normal-ac';
   }
