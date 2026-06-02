@@ -103,6 +103,10 @@ const state = {
   userPresets: [],
   hiddenBuiltIns: [],
   activePresetId: 'normal-ac',
+  fuelTracker: {
+    gas:  { active: false, startMs: null, startGal: 1.5 },
+    prop: { active: false, startMs: null, startLb:  20  },
+  },
 };
 
 // ── Persistence ───────────────────────────────────────────────────────────────
@@ -118,6 +122,7 @@ function loadState() {
     if (saved.userPresets)    state.userPresets = saved.userPresets;
     if (saved.hiddenBuiltIns) state.hiddenBuiltIns = saved.hiddenBuiltIns;
     if (saved.activePresetId !== undefined) state.activePresetId = saved.activePresetId;
+    if (saved.fuelTracker) Object.assign(state.fuelTracker, saved.fuelTracker);
   } catch (_) {}
 }
 
@@ -132,6 +137,7 @@ function saveState() {
     userPresets: state.userPresets,
     hiddenBuiltIns: state.hiddenBuiltIns,
     activePresetId: state.activePresetId,
+    fuelTracker: state.fuelTracker,
   }));
 }
 
@@ -780,30 +786,167 @@ function escHtml(s) {
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
-// ── Render: Fuel Burn ─────────────────────────────────────────────────────────
+// ── Fuel tracker helpers ──────────────────────────────────────────────────────
+let fuelTickInterval = null;
+
+function fmtElapsed(ms) {
+  if (!ms || ms < 0) return '0m';
+  const h = Math.floor(ms / 3600000);
+  const m = Math.floor((ms % 3600000) / 60000);
+  return h > 0 ? `${h}h ${m}m` : `${m}m`;
+}
+
+function fmtTime(ms) {
+  if (!ms) return '—';
+  return new Date(ms).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+}
+
+function trackerBurnRates(loadW) {
+  const { gasGalHr, propLbHr } = estFuelBurn(loadW);
+  return { gasGalHr, propLbHr };
+}
+
+function startFuelTracker(type, customGal, customLb) {
+  const now = Date.now();
+  const { running } = calcLoads();
+  if (type === 'gas' || type === 'both') {
+    state.fuelTracker.gas = { active: true, startMs: now, startGal: customGal ?? 1.5, loadW: running };
+  }
+  if (type === 'prop' || type === 'both') {
+    state.fuelTracker.prop = { active: true, startMs: now, startLb: customLb ?? 20, loadW: running };
+  }
+  saveState();
+  renderFuelTracker();
+}
+
+function stopFuelTracker(type) {
+  if (type === 'gas'  || type === 'both') state.fuelTracker.gas  = { active: false, startMs: null, startGal: 1.5 };
+  if (type === 'prop' || type === 'both') state.fuelTracker.prop = { active: false, startMs: null, startLb:  20  };
+  saveState();
+  renderFuelTracker();
+}
+
+function renderFuelTracker() {
+  const { running } = calcLoads();
+  const { gasGalHr, propLbHr } = trackerBurnRates(running);
+  const now = Date.now();
+  const gt = state.fuelTracker.gas;
+  const pt = state.fuelTracker.prop;
+
+  // Gas card
+  const gasEl = document.getElementById('tracker-gas');
+  if (gasEl) {
+    if (gt.active && gt.startMs) {
+      const elapsedMs    = now - gt.startMs;
+      const burnedGal    = (elapsedMs / 3600000) * gasGalHr;
+      const remainGal    = Math.max(0, gt.startGal - burnedGal);
+      const remainHrs    = gasGalHr > 0 ? remainGal / gasGalHr : Infinity;
+      const emptyMs      = gt.startMs + (gt.startGal / gasGalHr) * 3600000;
+      gasEl.innerHTML = `
+        <div class="tracker-stat-row">
+          <span class="tracker-label">Elapsed</span>
+          <span class="tracker-val">${fmtElapsed(elapsedMs)}</span>
+        </div>
+        <div class="tracker-stat-row">
+          <span class="tracker-label">Current burn rate</span>
+          <span class="tracker-val">${fmt(gasGalHr, 2)} gal/hr</span>
+        </div>
+        <div class="tracker-stat-row">
+          <span class="tracker-label">Est. remaining</span>
+          <span class="tracker-val tracker-remain ${remainGal < 0.3 ? 'tracker-warn' : ''}">${fmt(remainGal, 2)} gal</span>
+        </div>
+        <div class="tracker-stat-row">
+          <span class="tracker-label">Est. time left</span>
+          <span class="tracker-val tracker-remain ${remainHrs < 0.5 ? 'tracker-warn' : ''}">${fmt(remainHrs)} hrs</span>
+        </div>
+        <div class="tracker-stat-row">
+          <span class="tracker-label">Est. empty at</span>
+          <span class="tracker-val">${fmtTime(emptyMs)}</span>
+        </div>
+        <div class="tracker-stat-row">
+          <span class="tracker-label">Started</span>
+          <span class="tracker-val">${fmtTime(gt.startMs)} · ${fmt(gt.startGal, 1)} gal</span>
+        </div>
+        <button class="tracker-stop-btn" onclick="stopFuelTracker('gas')">⏹ Stop Gas Tracker</button>`;
+    } else {
+      gasEl.innerHTML = `<p class="tracker-idle">Not running. Use a start button above.</p>`;
+    }
+  }
+
+  // Propane card
+  const propEl = document.getElementById('tracker-prop');
+  if (propEl) {
+    if (pt.active && pt.startMs) {
+      const elapsedMs  = now - pt.startMs;
+      const burnedLb   = (elapsedMs / 3600000) * propLbHr;
+      const remainLb   = Math.max(0, pt.startLb - burnedLb);
+      const remainHrs  = propLbHr > 0 ? remainLb / propLbHr : Infinity;
+      const emptyMs    = pt.startMs + (pt.startLb / propLbHr) * 3600000;
+      propEl.innerHTML = `
+        <div class="tracker-stat-row">
+          <span class="tracker-label">Elapsed</span>
+          <span class="tracker-val">${fmtElapsed(elapsedMs)}</span>
+        </div>
+        <div class="tracker-stat-row">
+          <span class="tracker-label">Current burn rate</span>
+          <span class="tracker-val">${fmt(propLbHr, 2)} lb/hr</span>
+        </div>
+        <div class="tracker-stat-row">
+          <span class="tracker-label">Est. remaining</span>
+          <span class="tracker-val tracker-remain ${remainLb < 2 ? 'tracker-warn' : ''}">${fmt(remainLb, 1)} lb</span>
+        </div>
+        <div class="tracker-stat-row">
+          <span class="tracker-label">Est. time left</span>
+          <span class="tracker-val tracker-remain ${remainHrs < 0.5 ? 'tracker-warn' : ''}">${fmt(remainHrs)} hrs</span>
+        </div>
+        <div class="tracker-stat-row">
+          <span class="tracker-label">Est. empty at</span>
+          <span class="tracker-val">${fmtTime(emptyMs)}</span>
+        </div>
+        <div class="tracker-stat-row">
+          <span class="tracker-label">Started</span>
+          <span class="tracker-val">${fmtTime(pt.startMs)} · ${fmt(pt.startLb, 0)} lb</span>
+        </div>
+        <button class="tracker-stop-btn" onclick="stopFuelTracker('prop')">⏹ Stop Propane Tracker</button>`;
+    } else {
+      propEl.innerHTML = `<p class="tracker-idle">Not running. Use a start button above.</p>`;
+    }
+  }
+
+  // Live load line
+  const loadEl = document.getElementById('tracker-load');
+  if (loadEl) loadEl.textContent = `Based on current load: ${fmtW(running)} — burn rates update live as you change appliances.`;
+}
+
+function startFuelTickTimer() {
+  if (fuelTickInterval) clearInterval(fuelTickInterval);
+  fuelTickInterval = setInterval(() => {
+    if (document.getElementById('tracker-gas')) renderFuelTracker();
+  }, 30000); // refresh every 30 seconds
+}
+
+function stopFuelTickTimer() {
+  if (fuelTickInterval) { clearInterval(fuelTickInterval); fuelTickInterval = null; }
+}
+
+// ── Render: Fuel Burn (legacy display — synced from Calculator) ───────────────
 function updateFuelDisplay(currentLoad) {
-  const el = document.getElementById('fuel-current');
-  if (!el) return;
-
-  const { gasGalHr, gasHrsPerTank, gasHrsPer5gal,
-          propLbHr, propHrsPer20lb, propHrsPer40lb } = estFuelBurn(currentLoad);
-
-  el.innerHTML = `
-    <p>Current load from Calculator: <strong>${fmtW(currentLoad)}</strong></p>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:10px;">
+  // Update the burn rate summary used inside the Fuel tab's reference section
+  const summaryEl = document.getElementById('fuel-rate-summary');
+  if (!summaryEl) return;
+  const { gasGalHr, gasHrsPerTank, propLbHr, propHrsPer20lb } = estFuelBurn(currentLoad);
+  summaryEl.innerHTML = `
+    <div class="fuel-rate-grid">
       <div>
-        <div style="font-size:0.68rem;text-transform:uppercase;letter-spacing:0.05em;color:#60a5fa;margin-bottom:4px;">⛽ Gasoline</div>
-        <div style="font-size:0.78rem;">${fmt(gasGalHr, 2)} gal/hr</div>
-        <div style="font-size:0.78rem;">${fmt(gasHrsPerTank)} hrs / 1.5 gal tank</div>
-        <div style="font-size:0.78rem;">${fmt(gasHrsPer5gal)} hrs / 5 gal jug</div>
+        <div class="fuel-rate-label">⛽ Gasoline — current load ${fmtW(currentLoad)}</div>
+        <div class="fuel-rate-val">${fmt(gasGalHr, 2)} gal/hr &nbsp;·&nbsp; ${fmt(gasHrsPerTank)} hrs / 1.5 gal tank</div>
       </div>
       <div>
-        <div style="font-size:0.68rem;text-transform:uppercase;letter-spacing:0.05em;color:#a78bfa;margin-bottom:4px;">🔵 Propane</div>
-        <div style="font-size:0.78rem;">${fmt(propLbHr, 2)} lb/hr</div>
-        <div style="font-size:0.78rem;">${fmt(propHrsPer20lb)} hrs / 20 lb tank</div>
-        <div style="font-size:0.78rem;">${fmt(propHrsPer40lb)} hrs / 2×20 lb</div>
+        <div class="fuel-rate-label">🔵 Propane — current load ${fmtW(currentLoad)}</div>
+        <div class="fuel-rate-val">${fmt(propLbHr, 2)} lb/hr &nbsp;·&nbsp; ${fmt(propHrsPer20lb)} hrs / 20 lb tank</div>
       </div>
     </div>`;
+  renderFuelTracker();
 }
 
 function buildFuelHTML() {
@@ -815,21 +958,79 @@ function buildFuelHTML() {
     const label = pct === 0.25 ? 'Light (25%)' : pct === 0.5 ? '½ Load (50%) — spec basis' : pct === 0.75 ? 'Heavy (75%)' : 'Full (100%)';
     const isHalf = pct === 0.5;
     return `<tr${isHalf ? ' class="highlight-row"' : ''}>
-      <td>${label}</td>
-      <td>${gW}W</td>
-      <td>${fmt(gasHrsPerTank)} hrs</td>
-      <td>${fmt(gasHrsPer5gal)} hrs</td>
-      <td>${pW}W</td>
-      <td>${fmt(pProp20)} hrs</td>
-      <td>${fmt(pProp40)} hrs</td>
+      <td>${label}</td><td>${gW}W</td><td>${fmt(gasHrsPerTank)} hrs</td><td>${fmt(gasHrsPer5gal)} hrs</td>
+      <td>${pW}W</td><td>${fmt(pProp20)} hrs</td><td>${fmt(pProp40)} hrs</td>
     </tr>`;
   });
 
   return `
-    <div class="current-load-box" id="fuel-current">
-      <strong>Load from Calculator: —</strong>
+    <!-- ── Fuel Tracker ── -->
+    <div class="card">
+      <h2>Fuel Tracker</h2>
+      <p style="font-size:0.75rem;color:var(--text-muted);margin-bottom:14px;">
+        Tap a button when you start the generator on a full tank. The tracker estimates
+        remaining fuel and empty time based on your current appliance load.
+      </p>
+
+      <!-- Start buttons -->
+      <div class="tracker-start-btns">
+        <button class="tracker-start-btn tracker-gas-btn" onclick="startFuelTracker('gas')">
+          ⛽ Start Gas Tracker
+          <span class="tracker-btn-sub">Full 1.5 gal tank</span>
+        </button>
+        <button class="tracker-start-btn tracker-prop-btn" onclick="startFuelTracker('prop')">
+          🔵 Start Propane Tracker
+          <span class="tracker-btn-sub">Full 20 lb tank</span>
+        </button>
+        <button class="tracker-start-btn tracker-both-btn" onclick="startFuelTracker('both')">
+          ▶ Start Both
+          <span class="tracker-btn-sub">Full gas + propane</span>
+        </button>
+      </div>
+
+      <!-- Advanced collapsible -->
+      <details class="tracker-advanced">
+        <summary>Advanced / Manual Fuel Amounts</summary>
+        <div class="tracker-advanced-body">
+          <div class="tracker-adv-row">
+            <label>Gas start amount (gal):</label>
+            <input type="number" id="adv-gas-gal" value="1.5" min="0" max="10" step="0.1">
+          </div>
+          <div class="tracker-adv-row">
+            <label>Propane start amount (lb):</label>
+            <input type="number" id="adv-prop-lb" value="20" min="0" max="100" step="1">
+          </div>
+          <div class="tracker-adv-row" style="flex-wrap:wrap;gap:6px;">
+            <button class="tracker-adv-btn" onclick="startFuelTracker('gas',  +document.getElementById('adv-gas-gal').value, null)">Start Gas</button>
+            <button class="tracker-adv-btn" onclick="startFuelTracker('prop', null, +document.getElementById('adv-prop-lb').value)">Start Propane</button>
+            <button class="tracker-adv-btn" onclick="startFuelTracker('both', +document.getElementById('adv-gas-gal').value, +document.getElementById('adv-prop-lb').value)">Start Both</button>
+          </div>
+        </div>
+      </details>
+
+      <!-- Live load note -->
+      <p class="tracker-load-note" id="tracker-load"></p>
     </div>
 
+    <!-- Gas + Propane tracker cards -->
+    <div class="tracker-cards-grid">
+      <div class="card tracker-fuel-card">
+        <h2 class="tracker-fuel-title gas-title">⛽ Gasoline</h2>
+        <div id="tracker-gas"><p class="tracker-idle">Not running.</p></div>
+      </div>
+      <div class="card tracker-fuel-card">
+        <h2 class="tracker-fuel-title prop-title">🔵 Propane</h2>
+        <div id="tracker-prop"><p class="tracker-idle">Not running.</p></div>
+      </div>
+    </div>
+
+    <!-- Burn rates from current load -->
+    <div class="card">
+      <h2>Current Burn Rates</h2>
+      <div id="fuel-rate-summary"><p style="font-size:0.75rem;color:var(--text-muted);">Switch to the Calculator tab and select your loads first.</p></div>
+    </div>
+
+    <!-- Reference table -->
     <div class="card">
       <h2>Runtime Reference Table</h2>
       <div class="fuel-table-wrap">
@@ -841,41 +1042,30 @@ function buildFuelHTML() {
               <th colspan="3" class="prop-col">🔵 Propane</th>
             </tr>
             <tr>
-              <th class="gas-col">Watts</th>
-              <th class="gas-col">Hrs/1.5 gal</th>
-              <th class="gas-col">Hrs/5 gal</th>
-              <th class="prop-col">Watts</th>
-              <th class="prop-col">Hrs/20 lb</th>
-              <th class="prop-col">Hrs/2×20 lb</th>
+              <th class="gas-col">Watts</th><th class="gas-col">Hrs/1.5 gal</th><th class="gas-col">Hrs/5 gal</th>
+              <th class="prop-col">Watts</th><th class="prop-col">Hrs/20 lb</th><th class="prop-col">Hrs/2×20 lb</th>
             </tr>
           </thead>
           <tbody>${rows.join('')}</tbody>
         </table>
       </div>
       <p style="font-size:0.68rem;color:var(--text-muted);margin-top:8px;">
-        Highlighted row = published spec basis (WEN / Home Depot listing).
-        All other rows are proportional estimates.
+        Highlighted row = published spec basis (WEN / Home Depot). All other rows are proportional estimates.
       </p>
     </div>
 
     <div class="card">
-      <h2>Important Caveats</h2>
+      <h2>Caveats</h2>
       <ul class="guidance-list">
-        <li><span>📊</span><span>Estimates scale proportionally from the published half-load figure. Real burn varies.</span></li>
-        <li><span>🌡️</span><span>Hot weather increases A/C duty cycle and average fuel use — the Calculator shows worst-case instant load.</span></li>
-        <li><span>⛰️</span><span>High elevation reduces generator output and may increase fuel burn.</span></li>
-        <li><span>🔋</span><span>ECO mode can extend runtime significantly at light loads, but you noted you won't use it often.</span></li>
+        <li><span>📊</span><span>Burn rates scale proportionally from published half-load figures. Real burn varies.</span></li>
+        <li><span>🌡️</span><span>Hot weather increases A/C duty cycle and average fuel use.</span></li>
+        <li><span>⛰️</span><span>High elevation reduces generator output — use the Elevation section to account for derating.</span></li>
+        <li><span>🔋</span><span>ECO mode can significantly extend runtime at light loads.</span></li>
         <li><span>⛽</span><span>Tank fill level, fuel age, and generator condition all affect real runtime.</span></li>
-        <li><span>📝</span><span>Track your actual tank-to-tank times in Real-World Tests to refine your estimates.</span></li>
       </ul>
-    </div>
-
-    <div class="card">
-      <h2>Sources</h2>
-      <p style="font-size:0.73rem;color:var(--text-muted);line-height:1.7;">
-        WEN DF360iX product page (wenproducts.com) · Home Depot listing #330761409<br>
-        Published spec: ~5 hrs gasoline at half-load (1.5 gal) · ~11 hrs propane at half-load (20 lb).<br>
-        Propane half-load watts ≈ 1,300W (50% × 2,600W running rating).
+      <p style="font-size:0.68rem;color:var(--text-muted);margin-top:8px;">
+        Sources: WEN DF360iX product page · Home Depot listing #330761409<br>
+        ~5 hrs gasoline at half-load (1.5 gal) · ~11 hrs propane at half-load (20 lb)
       </p>
     </div>
   `;
@@ -1161,7 +1351,14 @@ function showTab(id) {
     document.getElementById('panel-' + t).classList.toggle('active', t === id);
   });
   if (id === 'tests')   renderTests();
-  if (id === 'fuel')    { const { running } = calcLoads(); updateFuelDisplay(running); }
+  if (id === 'fuel')    {
+    const { running } = calcLoads();
+    updateFuelDisplay(running);
+    renderFuelTracker();
+    startFuelTickTimer();
+  } else {
+    stopFuelTickTimer();
+  }
 }
 
 // ── Boot ──────────────────────────────────────────────────────────────────────
@@ -1174,6 +1371,8 @@ window.setElevationPreset = setElevationPreset;
 window.getGpsElevation = getGpsElevation;
 window.setBattery = setBattery;
 window.setChargeStrategy = setChargeStrategy;
+window.startFuelTracker = startFuelTracker;
+window.stopFuelTracker  = stopFuelTracker;
 window.addTest = addTest;
 window.deleteTest = deleteTest;
 window.updateTest = updateTest;
