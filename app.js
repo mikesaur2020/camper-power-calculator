@@ -304,17 +304,22 @@ function toggleAppliance(id) {
 
   // A/C mutual exclusion
   if (id === 'ac_cool' && checked) {
+    // Turning Cooling ON → turn Fan Only off
     state.appliances['ac_fan'] = false;
     const el = document.getElementById('toggle-ac_fan');
     if (el) el.checked = false;
   }
+  if (id === 'ac_cool' && !checked) {
+    // Turning Cooling OFF → auto-enable Fan Only
+    state.appliances['ac_fan'] = true;
+    const el = document.getElementById('toggle-ac_fan');
+    if (el) el.checked = true;
+  }
   if (id === 'ac_fan' && checked) {
-    if (state.appliances['ac_cool']) {
-      // Warn and block
-      document.getElementById('ac-warn').style.display = 'block';
-      document.getElementById('toggle-ac_fan').checked = false;
-      return;
-    }
+    // Turning Fan Only ON → turn Cooling off
+    state.appliances['ac_cool'] = false;
+    const el = document.getElementById('toggle-ac_cool');
+    if (el) el.checked = false;
   }
   if (id === 'ac_cool' || id === 'ac_fan') {
     document.getElementById('ac-warn').style.display = 'none';
