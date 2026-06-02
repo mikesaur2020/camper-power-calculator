@@ -163,14 +163,22 @@ function renderCalculator() {
   document.getElementById('res-peak').textContent    = fmtW(peak);
   document.getElementById('res-batt').textContent    = fmtW(battLoad);
 
-  // Elevation indicator
+  // Elevation indicator + collapsed summary
+  const deratePct = Math.round((1 - derated.gas.running / GEN.gas.running) * 100);
+  const elevDetail = state.elevation > 0
+    ? `${state.elevation.toLocaleString()} ft — ~${deratePct}% derating applied`
+    : 'Sea level (no derating)';
   const elevEl = document.getElementById('res-elev');
-  if (elevEl) {
-    const deratePct = Math.round((1 - derated.gas.running / GEN.gas.running) * 100);
-    elevEl.textContent = state.elevation > 0
-      ? `${state.elevation.toLocaleString()} ft — ~${deratePct}% derating applied`
-      : 'Sea level (no derating)';
-  }
+  if (elevEl) elevEl.textContent = elevDetail;
+  const elevSummary = document.getElementById('summary-elev');
+  if (elevSummary) elevSummary.textContent = state.elevation > 0
+    ? `${state.elevation.toLocaleString()} ft (−${deratePct}%)`
+    : 'Sea level';
+
+  // Battery state collapsed summary
+  const battLabels = { full: 'Full (+0W)', partial: 'Partial (+300W)', heavy: 'Heavy (+700W)' };
+  const battSummary = document.getElementById('summary-batt');
+  if (battSummary) battSummary.textContent = battLabels[state.battery];
 
   // Gas status
   const gasBadge = document.getElementById('gas-badge');
@@ -250,26 +258,32 @@ function buildCalculatorHTML() {
     </div>
 
     <!-- Elevation -->
-    <div class="card">
-      <h2>Elevation</h2>
-      <div class="elev-row">
-        <div class="elev-input-wrap">
-          <input type="number" id="elev-input" min="0" max="14000" step="100"
-            value="${state.elevation}"
-            oninput="setElevation(this.value)"
-            placeholder="0">
-          <span class="elev-unit">ft</span>
+    <div class="card collapsible-card">
+      <h2 class="collapsible-heading" onclick="toggleSection('elev-body', this)">
+        <span>Elevation</span>
+        <span class="section-watts" id="summary-elev"></span>
+        <span class="collapse-icon">▸</span>
+      </h2>
+      <div id="elev-body" style="display:none">
+        <div class="elev-row">
+          <div class="elev-input-wrap">
+            <input type="number" id="elev-input" min="0" max="14000" step="100"
+              value="${state.elevation}"
+              oninput="setElevation(this.value)"
+              placeholder="0">
+            <span class="elev-unit">ft</span>
+          </div>
+          <div class="elev-presets">
+            <button class="preset-btn" onclick="setElevationPreset(0)">Sea level</button>
+            <button class="preset-btn" onclick="setElevationPreset(1400)">Sioux Falls</button>
+            <button class="preset-btn" onclick="setElevationPreset(5280)">Denver</button>
+            <button class="preset-btn" onclick="setElevationPreset(7000)">7,000 ft</button>
+            <button class="preset-btn" onclick="setElevationPreset(9000)">9,000 ft</button>
+            <button class="preset-btn" onclick="setElevationPreset(11000)">11,000 ft</button>
+          </div>
         </div>
-        <div class="elev-presets">
-          <button class="preset-btn" onclick="setElevationPreset(0)">Sea level</button>
-          <button class="preset-btn" onclick="setElevationPreset(1400)">Sioux Falls</button>
-          <button class="preset-btn" onclick="setElevationPreset(5280)">Denver</button>
-          <button class="preset-btn" onclick="setElevationPreset(7000)">7,000 ft</button>
-          <button class="preset-btn" onclick="setElevationPreset(9000)">9,000 ft</button>
-          <button class="preset-btn" onclick="setElevationPreset(11000)">11,000 ft</button>
-        </div>
+        <div class="elev-note" id="res-elev"></div>
       </div>
-      <div class="elev-note" id="res-elev">Sea level (no derating)</div>
     </div>
 
     <!-- Results -->
@@ -321,21 +335,27 @@ function buildCalculatorHTML() {
     </div>
 
     <!-- Battery State -->
-    <div class="card">
-      <h2>Battery State</h2>
-      <p style="font-size:0.75rem;color:var(--text-muted);margin-bottom:8px;">
-        Estimates converter charging load added to generator while running.
-      </p>
-      <div class="battery-selector">
-        <button class="battery-btn ${state.battery === 'full' ? 'active' : ''}" onclick="setBattery('full')">
-          Full <span class="battery-sub">+0W</span>
-        </button>
-        <button class="battery-btn ${state.battery === 'partial' ? 'active' : ''}" onclick="setBattery('partial')">
-          Partial <span class="battery-sub">+300W</span>
-        </button>
-        <button class="battery-btn ${state.battery === 'heavy' ? 'active' : ''}" onclick="setBattery('heavy')">
-          Heavy <span class="battery-sub">+700W</span>
-        </button>
+    <div class="card collapsible-card">
+      <h2 class="collapsible-heading" onclick="toggleSection('batt-body', this)">
+        <span>Battery State</span>
+        <span class="section-watts" id="summary-batt"></span>
+        <span class="collapse-icon">▸</span>
+      </h2>
+      <div id="batt-body" style="display:none">
+        <p style="font-size:0.75rem;color:var(--text-muted);margin-bottom:8px;">
+          Estimates converter charging load added to generator while running.
+        </p>
+        <div class="battery-selector">
+          <button class="battery-btn ${state.battery === 'full' ? 'active' : ''}" onclick="setBattery('full')">
+            Full <span class="battery-sub">+0W</span>
+          </button>
+          <button class="battery-btn ${state.battery === 'partial' ? 'active' : ''}" onclick="setBattery('partial')">
+            Partial <span class="battery-sub">+300W</span>
+          </button>
+          <button class="battery-btn ${state.battery === 'heavy' ? 'active' : ''}" onclick="setBattery('heavy')">
+            Heavy <span class="battery-sub">+700W</span>
+          </button>
+        </div>
       </div>
     </div>
 
@@ -414,7 +434,7 @@ function setElevationPreset(ft) {
 }
 
 function collapseAll() {
-  ['summary-detail', 'always-body', 'highload-body', 'other-body'].forEach(id => {
+  ['elev-body', 'batt-body', 'summary-detail', 'always-body', 'highload-body', 'other-body'].forEach(id => {
     const body = document.getElementById(id);
     if (!body) return;
     body.style.display = 'none';
