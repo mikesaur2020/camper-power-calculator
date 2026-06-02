@@ -19,7 +19,7 @@ const APPLIANCES = [
   { id: 'furnace', name: 'Furnace Blower',   detail: 'Cold-weather use', running: 350, surge: 350, on: false, group: 'other' },
   { id: 'bathfan', name: 'Bathroom Vent Fan',detail: '', running: 40,   surge: 40,  on: false, group: 'other' },
   { id: 'rangehood',name: 'Range Hood Fan/Light', detail: '', running: 50, surge: 25, on: false, group: 'other' },
-  { id: 'leds',    name: 'Interior LED Lighting', detail: '', running: 75, surge: 0, on: false, group: 'other' },
+  { id: 'leds',    name: 'Interior LED Lighting', detail: '', running: 75, surge: 0, on: true,  group: 'other' },
 ];
 
 // ── Generator specs ───────────────────────────────────────────────────────────
@@ -195,6 +195,16 @@ function renderCalculator() {
   // Sync fuel burn tab
   updateFuelDisplay(running);
 
+  // Section wattage subtotals
+  const groupWatts = (ids) => ids.reduce((s, id) => s + (state.appliances[id] ? APPLIANCES.find(a => a.id === id).running : 0), 0);
+  const alwaysIds   = APPLIANCES.filter(a => a.group === 'always' || a.group === 'ac_alt').map(a => a.id);
+  const highloadIds = APPLIANCES.filter(a => a.group === 'highload').map(a => a.id);
+  const otherIds    = APPLIANCES.filter(a => a.group === 'other').map(a => a.id);
+  const setWatts = (id, w) => { const el = document.getElementById(id); if (el) el.textContent = w > 0 ? `${w.toLocaleString()}W` : ''; };
+  setWatts('watts-always',   groupWatts(alwaysIds));
+  setWatts('watts-highload', groupWatts(highloadIds));
+  setWatts('watts-other',    groupWatts(otherIds));
+
   // Keep warnings in sync regardless of what triggered the recalc
   const highLoadOn = ['micro','toaster','coffee','hairdryer','iron'].some(i => state.appliances[i]);
   const hlWarn = document.getElementById('highload-warn');
@@ -330,9 +340,11 @@ function buildCalculatorHTML() {
     <!-- Always-on -->
     <div class="card collapsible-card">
       <h2 class="collapsible-heading" onclick="toggleSection('always-body', this)">
-        Always-On Group <span class="collapse-icon">▾</span>
+        <span>Always-On Group</span>
+        <span class="section-watts" id="watts-always"></span>
+        <span class="collapse-icon">▸</span>
       </h2>
-      <div id="always-body">
+      <div id="always-body" style="display:none">
         ${acAlt.map(buildApplianceRow).join('')}
         <div class="ac-divider"></div>
         ${always.map(buildApplianceRow).join('')}
@@ -345,9 +357,11 @@ function buildCalculatorHTML() {
     <!-- High-load -->
     <div class="card collapsible-card">
       <h2 class="collapsible-heading" onclick="toggleSection('highload-body', this)">
-        Temporary High-Load — Use A/C Fan Only <span class="collapse-icon">▾</span>
+        <span>Temporary High-Load</span>
+        <span class="section-watts" id="watts-highload"></span>
+        <span class="collapse-icon">▸</span>
       </h2>
-      <div id="highload-body">
+      <div id="highload-body" style="display:none">
         <p style="font-size:0.73rem;color:var(--text-muted);margin-bottom:10px;">
           Switch A/C to Fan Only before running any of these. Use one at a time.
         </p>
@@ -359,9 +373,15 @@ function buildCalculatorHTML() {
     </div>
 
     <!-- Other -->
-    <div class="card">
-      <h2>Other / Intermittent Loads</h2>
-      ${other.map(buildApplianceRow).join('')}
+    <div class="card collapsible-card">
+      <h2 class="collapsible-heading" onclick="toggleSection('other-body', this)">
+        <span>Other / Intermittent Loads</span>
+        <span class="section-watts" id="watts-other"></span>
+        <span class="collapse-icon">▸</span>
+      </h2>
+      <div id="other-body" style="display:none">
+        ${other.map(buildApplianceRow).join('')}
+      </div>
     </div>
   `;
 }

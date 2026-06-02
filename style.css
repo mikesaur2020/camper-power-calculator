@@ -253,14 +253,25 @@ nav button.active {
   cursor: pointer;
   user-select: none;
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  gap: 8px;
 }
 .collapsible-heading:hover { opacity: 0.85; }
+.collapsible-heading > span:first-child { flex: 1; }
 .collapse-icon {
   font-size: 1rem;
   color: var(--text-muted);
   flex: 0 0 auto;
+}
+.section-watts {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--accent);
+  background: rgba(245,158,11,0.12);
+  border-radius: 10px;
+  padding: 2px 8px;
+  flex: 0 0 auto;
+  letter-spacing: 0.02em;
 }
 
 /* ── Toggle switches ── */
