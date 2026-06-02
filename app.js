@@ -265,9 +265,13 @@ function buildCalculatorHTML() {
     </div>
 
     <!-- Always-on -->
-    <div class="card">
-      <h2>Always-On Group</h2>
-      ${always.map(buildApplianceRow).join('')}
+    <div class="card collapsible-card">
+      <h2 class="collapsible-heading" onclick="toggleSection('always-body', this)">
+        Always-On Group <span class="collapse-icon">▾</span>
+      </h2>
+      <div id="always-body">
+        ${always.map(buildApplianceRow).join('')}
+      </div>
     </div>
 
     <!-- A/C alternate -->
@@ -280,14 +284,18 @@ function buildCalculatorHTML() {
     </div>
 
     <!-- High-load -->
-    <div class="card">
-      <h2>Temporary High-Load — Use A/C Fan Only</h2>
-      <p style="font-size:0.73rem;color:var(--text-muted);margin-bottom:10px;">
-        Switch A/C to Fan Only before running any of these. Use one at a time.
-      </p>
-      ${highload.map(buildApplianceRow).join('')}
-      <div class="warn-note" id="highload-warn" style="display:none">
-        ⚠️ A/C Cooling is active. Switch to Fan Only before using high-load appliances.
+    <div class="card collapsible-card">
+      <h2 class="collapsible-heading" onclick="toggleSection('highload-body', this)">
+        Temporary High-Load — Use A/C Fan Only <span class="collapse-icon">▾</span>
+      </h2>
+      <div id="highload-body">
+        <p style="font-size:0.73rem;color:var(--text-muted);margin-bottom:10px;">
+          Switch A/C to Fan Only before running any of these. Use one at a time.
+        </p>
+        ${highload.map(buildApplianceRow).join('')}
+        <div class="warn-note" id="highload-warn" style="display:none">
+          ⚠️ A/C Cooling is active. Switch to Fan Only before using high-load appliances.
+        </div>
       </div>
     </div>
 
@@ -297,6 +305,14 @@ function buildCalculatorHTML() {
       ${other.map(buildApplianceRow).join('')}
     </div>
   `;
+}
+
+function toggleSection(bodyId, heading) {
+  const body = document.getElementById(bodyId);
+  const icon = heading.querySelector('.collapse-icon');
+  const collapsed = body.style.display === 'none';
+  body.style.display = collapsed ? '' : 'none';
+  icon.textContent = collapsed ? '▾' : '▸';
 }
 
 function toggleAppliance(id) {
@@ -645,6 +661,7 @@ function showTab(id) {
 
 // ── Boot ──────────────────────────────────────────────────────────────────────
 window.toggleAppliance = toggleAppliance;
+window.toggleSection = toggleSection;
 window.setBattery = setBattery;
 window.addTest = addTest;
 window.deleteTest = deleteTest;

@@ -182,6 +182,21 @@ nav button.active {
 .headroom-pos { color: var(--good); font-weight: 600; }
 .headroom-neg { color: var(--over); font-weight: 600; }
 
+/* ── Collapsible cards ── */
+.collapsible-heading {
+  cursor: pointer;
+  user-select: none;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.collapsible-heading:hover { opacity: 0.85; }
+.collapse-icon {
+  font-size: 1rem;
+  color: var(--text-muted);
+  flex: 0 0 auto;
+}
+
 /* ── Toggle switches ── */
 .appliance-row {
   display: flex;
