@@ -6,13 +6,20 @@ A static Progressive Web App (PWA) for generator-only camping with the **WEN DF3
 
 Replaces an Excel workbook with an installable, offline-capable iPhone-friendly PWA. Calculates generator running load, startup surge, peak load, and fuel/propane status for any combination of RV appliances.
 
-**Key features (new: Fuel Tracker tab):**
-- Auto Fuel Selection: models WEN DF360iX propane-first behavior
-- Overnight Confidence indicator (High / Moderate / Low based on runtime)
-- Combined propane + gasoline runtime with manual switchover note
-- Session tracking with elapsed time and load change detection
+**Primary question this app answers:**
+> "How long can I run the camper on my current fuel setup?"
 
-**All features:**
+The **Live Fuel Tracker** tab is the default. It models the WEN DF360iX Auto Fuel Selection system and shows Overnight Confidence, combined runtime, and session tracking.
+
+**Tab order:**
+1. Live Fuel Tracker ← default
+2. Calculator
+3. Real-World Tests
+4. Fuel Burn Reference
+5. Ambient & A/C
+6. About
+
+**Key features:**
 - Calculator with live load summary and gasoline/propane status side-by-side
 - Elevation-aware generator derating (3.5% per 1,000 ft)
 - GPS elevation lookup via browser geolocation + Open Elevation API

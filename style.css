@@ -964,6 +964,35 @@ nav button.active {
 }
 .ft-reset-btn:hover { color: var(--accent); border-color: var(--accent); }
 
+.ft-combo-card { padding: 0; overflow: hidden; }
+.ft-combo-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  padding: 12px 14px;
+}
+.ft-combo-icon { font-size: 1.1rem; }
+.ft-combo-both { background: rgba(196,181,253,0.1); color: #c4b5fd; }
+.ft-combo-prop { background: rgba(196,181,253,0.1); color: #c4b5fd; }
+.ft-combo-gas  { background: rgba(147,197,253,0.1); color: #93c5fd; }
+.ft-combo-none { background: rgba(249,115,22,0.1);  color: #fb923c; }
+.ft-combo-list {
+  list-style: none;
+  padding: 0 14px 12px;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.ft-combo-list li {
+  font-size: 0.77rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+.ft-combo-list li strong { color: var(--text); }
+
 /* ── Real-World Tests ── */
 .tests-table-wrap { overflow-x: auto; }
 table {

@@ -1224,7 +1224,7 @@ function buildAboutHTML() {
       </div>
     </div>
 
-    <div class="version">Camper Power Calculator · v1.0 · Built for WEN DF360iX + Coachmen Apex 28RBS</div>
+    <div class="version">Mike's Camper Power Calculator · Built for WEN DF360iX + Coachmen Apex 28RBS<br>Primary tab: Live Fuel Tracker — answers "How long can I run on my current fuel?"</div>
   `;
 }
 
@@ -1443,6 +1443,47 @@ function stopFtTickTimer() {
   if (ftTickInterval) { clearInterval(ftTickInterval); ftTickInterval = null; }
 }
 
+function ftComboGuidance(propane, gas) {
+  if (propane && gas) return `
+    <div class="ft-combo-header ft-combo-both">
+      <span class="ft-combo-icon">🔥⛽</span>
+      <span>Propane + Gasoline</span>
+    </div>
+    <ul class="ft-combo-list">
+      <li>🔥 <strong>Active fuel: Propane.</strong> The WEN DF360iX prioritizes LPG — gasoline is not consumed while propane is connected.</li>
+      <li>⛽ Gasoline is your <strong>reserve fuel</strong> and will not be used until you manually disconnect the LPG regulator hose.</li>
+      <li>⏱️ Combined runtime above shows total potential runtime across both tanks, assuming a manual fuel switch after propane runs out.</li>
+      <li>⚠️ The WEN DF360iX does <strong>not</strong> switch fuels automatically. You must disconnect the LPG hose to enable gasoline use.</li>
+    </ul>`;
+  if (propane && !gas) return `
+    <div class="ft-combo-header ft-combo-prop">
+      <span class="ft-combo-icon">🔥</span>
+      <span>Propane Only</span>
+    </div>
+    <ul class="ft-combo-list">
+      <li>🔥 <strong>Active fuel: Propane.</strong> Generator runs entirely on LPG.</li>
+      <li>📦 Runtime is limited to your propane tank. No gasoline fallback.</li>
+      <li>💡 If you have gasoline available, enable it above to see combined runtime.</li>
+    </ul>`;
+  if (!propane && gas) return `
+    <div class="ft-combo-header ft-combo-gas">
+      <span class="ft-combo-icon">⛽</span>
+      <span>Gasoline Only</span>
+    </div>
+    <ul class="ft-combo-list">
+      <li>⛽ <strong>Active fuel: Gasoline.</strong> No propane is connected, so the generator uses the gasoline tank.</li>
+      <li>🔌 To switch to propane priority, connect the propane tank and LPG regulator hose, then toggle Propane Connected above.</li>
+    </ul>`;
+  return `
+    <div class="ft-combo-header ft-combo-none">
+      <span class="ft-combo-icon">⚠️</span>
+      <span>No Fuel Available</span>
+    </div>
+    <ul class="ft-combo-list">
+      <li>The generator cannot run without fuel. Connect propane or ensure the gasoline tank has fuel, then update the settings above.</li>
+    </ul>`;
+}
+
 function buildFuelTrackerHTML() {
   return `<div id="ft-panel"></div>`;
 }
@@ -1507,6 +1548,11 @@ function renderFuelTrackerTab() {
         <span class="ft-active-value">${srcLabel}</span>
       </div>
       ${src === 'none' ? '<div class="ft-no-fuel">⚠️ No fuel source selected. Connect propane or confirm gasoline is available.</div>' : ''}
+    </div>
+
+    <!-- Fuel Combination Guidance -->
+    <div class="card ft-combo-card">
+      ${ftComboGuidance(ft.propaneConnected, ft.gasAvailable)}
     </div>
 
     <!-- Current Load -->
@@ -1588,7 +1634,7 @@ function renderFuelTrackerTab() {
   `;
 }
 
-const TABS = ['calc','tests','fuel','ambient','ftracker','about'];
+const TABS = ['ftracker','calc','tests','fuel','ambient','about'];
 
 function showTab(id) {
   TABS.forEach(t => {
@@ -1654,10 +1700,10 @@ document.addEventListener('DOMContentLoaded', () => {
     state.activePresetId = 'normal-ac';
   }
 
+  document.getElementById('panel-ftracker').innerHTML  = buildFuelTrackerHTML();
   document.getElementById('panel-calc').innerHTML      = buildCalculatorHTML();
   document.getElementById('panel-fuel').innerHTML      = buildFuelHTML();
   document.getElementById('panel-ambient').innerHTML   = buildAmbientHTML();
-  document.getElementById('panel-ftracker').innerHTML  = buildFuelTrackerHTML();
   document.getElementById('panel-about').innerHTML     = buildAboutHTML();
 
   // Re-apply button active states after HTML rebuild
@@ -1668,7 +1714,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   renderCalculator();  // also sets warnings via renderCalculator
   renderPresetButtons();
-  showTab('calc');
+  showTab('ftracker');
   window.scrollTo(0, 0);
 
   // Service Worker

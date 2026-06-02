@@ -27,16 +27,17 @@
   </header>
 
   <nav>
-    <button id="tab-calc"    class="active" onclick="showTab('calc')">Calculator</button>
+    <button id="tab-ftracker" class="active" onclick="showTab('ftracker')">Live Fuel Tracker</button>
+    <button id="tab-calc"    onclick="showTab('calc')">Calculator</button>
     <button id="tab-tests"   onclick="showTab('tests')">Real-World Tests</button>
-    <button id="tab-fuel"    onclick="showTab('fuel')">Fuel Burn</button>
+    <button id="tab-fuel"    onclick="showTab('fuel')">Fuel Burn Reference</button>
     <button id="tab-ambient" onclick="showTab('ambient')">Ambient &amp; A/C</button>
-    <button id="tab-ftracker" onclick="showTab('ftracker')">Fuel Tracker</button>
     <button id="tab-about"   onclick="showTab('about')">About</button>
   </nav>
 
   <main>
-    <div id="panel-calc"    class="tab-panel active"></div>
+    <div id="panel-ftracker" class="tab-panel active"></div>
+    <div id="panel-calc"    class="tab-panel"></div>
 
     <div id="panel-tests"   class="tab-panel">
       <div class="card">
@@ -65,7 +66,6 @@
 
     <div id="panel-fuel"     class="tab-panel"></div>
     <div id="panel-ambient"  class="tab-panel"></div>
-    <div id="panel-ftracker" class="tab-panel"></div>
     <div id="panel-about"    class="tab-panel"></div>
   </main>
 
