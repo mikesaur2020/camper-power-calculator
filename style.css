@@ -1106,6 +1106,36 @@ details[open] .what-summary::before { content: '▾ '; }
 .ft-conf-desc  { font-size: 0.75rem; color: var(--text-muted); margin-bottom: 12px; }
 .ft-conf-detail { border-top: 1px solid var(--border); padding-top: 10px; }
 
+.ft-track-status {
+  font-size: 0.85rem;
+  font-weight: 700;
+  padding: 8px 12px;
+  border-radius: 8px;
+  margin-bottom: 4px;
+}
+.ft-track-prop { background: rgba(196,181,253,0.15); color: #c4b5fd; }
+.ft-track-gas  { background: rgba(147,197,253,0.15); color: #93c5fd; }
+.ft-track-off  { background: var(--surface2); color: var(--text-muted); font-weight: 400; }
+
+.ft-start-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 12px;
+}
+@media (max-width: 480px) { .ft-start-grid { grid-template-columns: 1fr; } }
+.ft-start-col { display: flex; flex-direction: column; gap: 6px; }
+.ft-start-full { width: 100%; max-width: none; }
+.ft-start-warn {
+  font-size: 0.68rem;
+  color: #fb923c;
+  background: rgba(249,115,22,0.08);
+  border: 1px solid rgba(249,115,22,0.25);
+  border-radius: 6px;
+  padding: 6px 8px;
+  line-height: 1.5;
+}
+
 .ft-tracking-active { display: flex; flex-direction: column; gap: 0; }
 .ft-tracking-btns { display: flex; gap: 8px; margin-top: 12px; }
 .ft-reset-btn {

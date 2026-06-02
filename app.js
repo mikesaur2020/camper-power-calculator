@@ -123,7 +123,7 @@ const state = {
   ft: {
     propaneConnected: true,
     gasAvailable:     true,
-    tracking:         false,
+    trackingFuel:     null,   // 'propane' | 'gas' | null
     startMs:          null,
     startLoadW:       null,
     startGal:         1.5,
@@ -1440,29 +1440,60 @@ function setFtGas(val) {
   renderFuelTrackerTab();
 }
 
-function ftStartTracking() {
+function ftStartPropaneTracker() {
+  if (!state.ft.propaneConnected) {
+    // auto-enable propane and proceed (user confirmed via button tap)
+    state.ft.propaneConnected = true;
+  }
   const { running } = calcLoads();
-  state.ft.tracking   = true;
-  state.ft.startMs    = Date.now();
-  state.ft.startLoadW = running;
-  ftLastLoadW         = running;
+  state.ft.trackingFuel = 'propane';
+  state.ft.startMs      = Date.now();
+  state.ft.startLoadW   = running;
+  ftLastLoadW           = running;
+  saveState();
+  renderFuelTrackerTab();
+}
+
+function ftStartGasTracker() {
+  // If propane is connected, auto-set to disconnected (user confirmed via button tap)
+  if (state.ft.propaneConnected) {
+    state.ft.propaneConnected = false;
+  }
+  const { running } = calcLoads();
+  state.ft.trackingFuel = 'gas';
+  state.ft.startMs      = Date.now();
+  state.ft.startLoadW   = running;
+  ftLastLoadW           = running;
   saveState();
   renderFuelTrackerTab();
 }
 
 function ftStopTracking() {
-  state.ft.tracking = false;
+  state.ft.trackingFuel = null;
   saveState();
   renderFuelTrackerTab();
 }
 
 function ftResetTracking() {
-  state.ft.tracking   = false;
-  state.ft.startMs    = null;
-  state.ft.startLoadW = null;
-  ftLastLoadW         = null;
+  state.ft.trackingFuel = null;
+  state.ft.startMs      = null;
+  state.ft.startLoadW   = null;
+  ftLastLoadW           = null;
   saveState();
   renderFuelTrackerTab();
+}
+
+function confirmFtPropane() {
+  if (confirm('Propane is set to Not Connected. Set Propane Connected = Yes and start the propane tracker?')) {
+    state.ft.propaneConnected = true;
+    ftStartPropaneTracker();
+  }
+}
+
+function confirmFtGas() {
+  if (confirm('Propane is currently Connected. The WEN DF360iX will use propane first if the LPG hose is connected.\n\nOnly continue if you have already disconnected the LPG hose.\n\nSet Propane Connected = No and start the gasoline tracker?')) {
+    ftStartGasTracker();
+  }
 }
 
 function startFtTickTimer() {
@@ -1641,7 +1672,7 @@ function renderFuelTrackerTab() {
 
   // Load change detection
   let loadChangedNote = '';
-  if (ft.tracking && ft.startLoadW != null && ft.startLoadW !== running) {
+  if (ft.trackingFuel && ft.startLoadW != null && ft.startLoadW !== running) {
     loadChangedNote = `<div class="ft-load-changed">Load changed from ${fmtW(ft.startLoadW)} to ${fmtW(running)}. Runtime estimate updated.</div>`;
     state.ft.startLoadW = running;
     ftLastLoadW = running;
@@ -1649,7 +1680,7 @@ function renderFuelTrackerTab() {
   }
 
   // Elapsed
-  const elapsedMs  = ft.tracking && ft.startMs ? nowMs - ft.startMs : 0;
+  const elapsedMs  = ft.trackingFuel && ft.startMs ? nowMs - ft.startMs : 0;
 
   // Source label
   const srcLabel = src === 'propane'
@@ -1805,26 +1836,55 @@ function renderFuelTrackerTab() {
       </div>`;
     })()}
 
-    <!-- Tracking -->
+    <!-- Fuel-Specific Tracking -->
     <div class="card">
-      <h2>Session Tracking</h2>
-      <p class="ft-sub" style="margin-bottom:12px;">Track how long this generator session has been running.</p>
-      ${ft.tracking && ft.startMs ? `
-        <div class="ft-tracking-active">
+      <h2>Fuel Tracker</h2>
+
+      <!-- Status badge -->
+      <div class="ft-track-status ${ft.trackingFuel === 'propane' ? 'ft-track-prop' : ft.trackingFuel === 'gas' ? 'ft-track-gas' : 'ft-track-off'}">
+        ${ft.trackingFuel === 'propane' ? '🔥 Tracking: Propane Active'
+          : ft.trackingFuel === 'gas'   ? '⛽ Tracking: Gasoline Active'
+          : '⏸ Not Started'}
+      </div>
+
+      ${ft.trackingFuel && ft.startMs ? `
+        <!-- Active tracking display -->
+        <div class="ft-tracking-active" style="margin-top:12px;">
+          <div class="ft-empty-row"><span>Fuel</span><span>${ft.trackingFuel === 'propane' ? '🔥 Propane' : '⛽ Gasoline'}</span></div>
           <div class="ft-empty-row"><span>Started</span><span>${fmtTime(ft.startMs)}</span></div>
           <div class="ft-empty-row"><span>Elapsed</span><span>${fmtElapsed(elapsedMs)}</span></div>
-          <div class="ft-empty-row"><span>Started on load</span><span>${ft.startLoadW != null ? fmtW(ft.startLoadW) : '—'}</span></div>
+          <div class="ft-empty-row"><span>Load at start</span><span>${ft.startLoadW != null ? fmtW(ft.startLoadW) : '—'}</span></div>
+          ${loadChangedNote}
+          ${ft.trackingFuel === 'propane' && ft.gasAvailable ? `
+          <p class="ft-reserve-note" style="margin-top:8px;">
+            After propane is depleted, disconnect the LPG regulator hose and restart the generator to run on gasoline.
+          </p>` : ''}
           <div class="ft-tracking-btns">
-            <button class="tracker-stop-btn" onclick="ftStopTracking()" style="width:auto;margin-top:0;">⏹ Stop</button>
-            <button class="ft-reset-btn" onclick="ftResetTracking()">↺ Reset</button>
+            <button class="tracker-stop-btn" onclick="ftStopTracking()" style="width:auto;margin-top:0;">⏹ Stop Active Tracker</button>
+            <button class="ft-reset-btn" onclick="ftResetTracking()">↺ Reset Fuel Tracker</button>
           </div>
         </div>
       ` : `
-        <button class="tracker-start-btn tracker-both-btn tracker-card-start-btn" style="max-width:300px;" onclick="ftStartTracking()">
-          ▶ Start Tracking
-          <span class="tracker-btn-sub">Records start time and load</span>
-        </button>
-        ${ft.startMs ? `<button class="ft-reset-btn" style="margin-top:8px;" onclick="ftResetTracking()">↺ Clear Previous Session</button>` : ''}
+        <!-- Start buttons -->
+        <div class="ft-start-grid">
+          <div class="ft-start-col">
+            <button class="tracker-start-btn tracker-prop-btn tracker-card-start-btn ft-start-full"
+              onclick="${!ft.propaneConnected ? `confirmFtPropane()` : `ftStartPropaneTracker()`}">
+              🔥 Start Propane Tracker
+              <span class="tracker-btn-sub">Use when LPG hose is connected — WEN uses propane first</span>
+            </button>
+            ${!ft.propaneConnected ? `<p class="ft-start-warn">⚠️ Propane is set to Not Connected. Tapping will set it to Connected and start the propane tracker.</p>` : ''}
+          </div>
+          <div class="ft-start-col">
+            <button class="tracker-start-btn tracker-gas-btn tracker-card-start-btn ft-start-full"
+              onclick="${ft.propaneConnected ? `confirmFtGas()` : `ftStartGasTracker()`}">
+              ⛽ Start Gasoline Tracker
+              <span class="tracker-btn-sub">Use only after LPG hose is disconnected or when running gas-only</span>
+            </button>
+            ${ft.propaneConnected ? `<p class="ft-start-warn">⚠️ Propane is Connected. Tapping will set it to Disconnected and start the gasoline tracker. The WEN uses propane first if LPG is connected.</p>` : ''}
+          </div>
+        </div>
+        ${ft.startMs ? `<button class="ft-reset-btn" style="margin-top:10px;" onclick="ftResetTracking()">↺ Clear Previous Session</button>` : ''}
       `}
     </div>
   `;
@@ -1870,9 +1930,12 @@ window.openHelp         = openHelp;
 window.closeHelp        = closeHelp;
 window.setFtPropane     = setFtPropane;
 window.setFtGas         = setFtGas;
-window.ftStartTracking  = ftStartTracking;
-window.ftStopTracking   = ftStopTracking;
-window.ftResetTracking  = ftResetTracking;
+window.ftStartPropaneTracker = ftStartPropaneTracker;
+window.ftStartGasTracker     = ftStartGasTracker;
+window.confirmFtPropane      = confirmFtPropane;
+window.confirmFtGas          = confirmFtGas;
+window.ftStopTracking        = ftStopTracking;
+window.ftResetTracking       = ftResetTracking;
 window.addTest = addTest;
 window.deleteTest = deleteTest;
 window.updateTest = updateTest;
