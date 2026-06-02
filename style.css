@@ -438,6 +438,27 @@ nav button.active {
   margin: 6px 0;
 }
 
+/* ── Load status banner ── */
+.load-banner {
+  border-radius: 8px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  margin-bottom: 10px;
+  padding: 10px 14px;
+  text-align: center;
+  letter-spacing: 0.02em;
+}
+.load-banner-near {
+  background: rgba(249,115,22,0.15);
+  border: 1px solid rgba(249,115,22,0.5);
+  color: #fb923c;
+}
+.load-banner-over {
+  background: rgba(239,68,68,0.15);
+  border: 1px solid rgba(239,68,68,0.5);
+  color: #f87171;
+}
+
 /* ── Collapsible cards ── */
 .collapsible-heading {
   cursor: pointer;

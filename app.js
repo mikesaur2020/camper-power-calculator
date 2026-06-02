@@ -233,6 +233,30 @@ function renderCalculator() {
   // Sync fuel burn tab
   updateFuelDisplay(running);
 
+  // Load status banner
+  const banner = document.getElementById('load-banner');
+  if (banner) {
+    const worstStatus = (gas.status === 'over' || prop.status === 'over') ? 'over'
+                      : (gas.status === 'near' || prop.status === 'near') ? 'near' : 'good';
+    if (worstStatus === 'over') {
+      const msgs = [];
+      if (gas.status  === 'over') msgs.push(`⛽ Gas: ${gas.label}`);
+      if (prop.status === 'over') msgs.push(`🔵 Propane: ${prop.label}`);
+      banner.textContent = msgs.join('  ·  ');
+      banner.className = 'load-banner load-banner-over';
+      banner.style.display = 'block';
+    } else if (worstStatus === 'near') {
+      const msgs = [];
+      if (gas.status  === 'near') msgs.push('⛽ Gas: Near Limit');
+      if (prop.status === 'near') msgs.push('🔵 Propane: Near Limit');
+      banner.textContent = msgs.join('  ·  ');
+      banner.className = 'load-banner load-banner-near';
+      banner.style.display = 'block';
+    } else {
+      banner.style.display = 'none';
+    }
+  }
+
   // Section wattage subtotals
   const groupWatts = (ids) => ids.reduce((s, id) => s + (state.appliances[id] ? APPLIANCES.find(a => a.id === id).running : 0), 0);
   const alwaysIds   = APPLIANCES.filter(a => a.group === 'always' || a.group === 'ac_alt').map(a => a.id);
@@ -327,6 +351,8 @@ function buildCalculatorHTML() {
       <h2 class="collapsible-heading" onclick="toggleSection('summary-detail', this)">
         Generator Load Summary <span class="collapse-icon">▸</span>
       </h2>
+
+      <div id="load-banner" style="display:none" class="load-banner"></div>
 
       <div id="summary-detail" style="display:none">
         <div class="results-grid">
