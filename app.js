@@ -1022,6 +1022,15 @@ document.addEventListener('DOMContentLoaded', () => {
   loadState();
   initTests();
 
+  // Always start on Normal A/C preset with Full battery — only tests persist
+  const defaultPreset = BUILT_IN_PRESETS.find(p => p.id === 'normal-ac');
+  if (defaultPreset) {
+    Object.assign(state.appliances, defaultPreset.appliances);
+    state.battery = 'full';
+    state.elevation = defaultPreset.elevation;
+    state.activePresetId = 'normal-ac';
+  }
+
   document.getElementById('panel-calc').innerHTML    = buildCalculatorHTML();
   document.getElementById('panel-fuel').innerHTML    = buildFuelHTML();
   document.getElementById('panel-ambient').innerHTML = buildAmbientHTML();
