@@ -263,10 +263,10 @@ function buildCalculatorHTML() {
     <!-- Results -->
     <div class="card collapsible-card">
       <h2 class="collapsible-heading" onclick="toggleSection('summary-detail', this)">
-        Generator Load Summary <span class="collapse-icon">▾</span>
+        Generator Load Summary <span class="collapse-icon">▸</span>
       </h2>
 
-      <div id="summary-detail">
+      <div id="summary-detail" style="display:none">
         <div class="results-grid">
           <div class="result-block">
             <div class="result-label">Running Load</div>
