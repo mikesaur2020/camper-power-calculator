@@ -125,6 +125,17 @@ const state = {
     startGal:         1.5,
     startLb:          20,
   },
+  // Weather Advisory
+  weather: {
+    locationMode: null,   // 'gps' | 'zip' | null
+    zip:          '',
+    lat:          null,
+    lon:          null,
+    forecastLow:  null,   // °F integer
+    fetchedMs:    null,
+    error:        false,
+    loading:      false,
+  },
 };
 
 // ── Persistence ───────────────────────────────────────────────────────────────
@@ -141,6 +152,7 @@ function loadState() {
     if (saved.hiddenBuiltIns) state.hiddenBuiltIns = saved.hiddenBuiltIns;
     if (saved.activePresetId !== undefined) state.activePresetId = saved.activePresetId;
     if (saved.ft) Object.assign(state.ft, saved.ft);
+    if (saved.weather) { Object.assign(state.weather, saved.weather); state.weather.loading = false; }
     if (saved.quickStartCollapsed != null) state.quickStartCollapsed = saved.quickStartCollapsed;
     if (saved.welcomeDismissed != null)    state.welcomeDismissed    = saved.welcomeDismissed;
   } catch (_) {}
@@ -158,6 +170,7 @@ function saveState() {
     hiddenBuiltIns: state.hiddenBuiltIns,
     activePresetId: state.activePresetId,
     ft: state.ft,
+    weather: { locationMode: state.weather.locationMode, zip: state.weather.zip, lat: state.weather.lat, lon: state.weather.lon, forecastLow: state.weather.forecastLow, fetchedMs: state.weather.fetchedMs, error: state.weather.error },
     quickStartCollapsed: state.quickStartCollapsed,
     welcomeDismissed:    state.welcomeDismissed,
   }));
@@ -1651,11 +1664,141 @@ function renderFuelTrackerTab() {
         </div>
         <div class="ft-conf-detail">
           <div class="ft-empty-row"><span>Current time</span><span>${nowStr}</span></div>
+          ${state.weather.forecastLow !== null && !state.weather.error ? (() => {
+            const wi = weatherImpact(state.weather.forecastLow);
+            return `<div class="ft-empty-row wi-conf-row"><span>Weather Impact</span><span class="wi-badge ${wi.css}">${wi.level}</span></div>`;
+          })() : ''}
         </div>
       </div>`;
     })()}
 
+    <!-- Weather Advisory -->
+    ${buildWeatherCard()}
+
   `;
+}
+
+// ── Weather Advisory ──────────────────────────────────────────────────────────
+const WEATHER_CACHE_MS = 3 * 60 * 60 * 1000; // 3 hours
+
+function weatherImpact(tempF) {
+  if (tempF > 40)  return { level: 'Minimal',  css: 'wi-minimal',  advisory: 'Normal operation expected.' };
+  if (tempF >= 25) return { level: 'Moderate', css: 'wi-moderate', advisory: 'Cold temperatures may slightly reduce propane performance.' };
+  if (tempF >= 10) return { level: 'Elevated', css: 'wi-elevated', advisory: 'Consider gasoline overnight if high generator loads are expected.' };
+  return           { level: 'High',    css: 'wi-high',     advisory: 'Propane vaporization may be reduced from a standard 20 lb tank. Consider gasoline operation.' };
+}
+
+async function fetchForecastLow(lat, lon) {
+  const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&daily=temperature_2m_min&temperature_unit=fahrenheit&forecast_days=1&timezone=auto`;
+  const r = await fetch(url);
+  if (!r.ok) throw new Error('Weather fetch failed');
+  const d = await r.json();
+  return Math.round(d.daily.temperature_2m_min[0]);
+}
+
+async function fetchWeatherGps() {
+  if (!navigator.geolocation) { state.weather.error = true; renderFuelTrackerTab(); return; }
+  state.weather.loading = true;
+  renderFuelTrackerTab();
+  try {
+    const pos = await new Promise((res, rej) =>
+      navigator.geolocation.getCurrentPosition(res, rej, { timeout: 10000 })
+    );
+    const { latitude: lat, longitude: lon } = pos.coords;
+    const low = await fetchForecastLow(lat, lon);
+    Object.assign(state.weather, { locationMode: 'gps', lat, lon, forecastLow: low, fetchedMs: Date.now(), error: false, loading: false });
+    saveState();
+  } catch (_) {
+    state.weather.error = true;
+    state.weather.loading = false;
+  }
+  renderFuelTrackerTab();
+}
+
+async function fetchWeatherZip() {
+  const input = document.getElementById('weather-zip-input');
+  const zip = input ? input.value.trim() : state.weather.zip;
+  if (!zip || !/^\d{5}$/.test(zip)) return;
+  state.weather.loading = true;
+  state.weather.zip = zip;
+  renderFuelTrackerTab();
+  try {
+    const gr = await fetch(`https://api.zippopotam.us/us/${zip}`);
+    if (!gr.ok) throw new Error('ZIP not found');
+    const gd = await gr.json();
+    const lat = parseFloat(gd.places[0].latitude);
+    const lon = parseFloat(gd.places[0].longitude);
+    const low = await fetchForecastLow(lat, lon);
+    Object.assign(state.weather, { locationMode: 'zip', lat, lon, forecastLow: low, fetchedMs: Date.now(), error: false, loading: false });
+    saveState();
+  } catch (_) {
+    state.weather.error = true;
+    state.weather.loading = false;
+  }
+  renderFuelTrackerTab();
+}
+
+async function refreshWeather() {
+  if (!state.weather.lat || !state.weather.lon) return;
+  state.weather.loading = true;
+  renderFuelTrackerTab();
+  try {
+    const low = await fetchForecastLow(state.weather.lat, state.weather.lon);
+    Object.assign(state.weather, { forecastLow: low, fetchedMs: Date.now(), error: false, loading: false });
+    saveState();
+  } catch (_) {
+    state.weather.error = true;
+    state.weather.loading = false;
+  }
+  renderFuelTrackerTab();
+}
+
+function clearWeatherLocation() {
+  Object.assign(state.weather, { locationMode: null, zip: '', lat: null, lon: null, forecastLow: null, fetchedMs: null, error: false, loading: false });
+  saveState();
+  renderFuelTrackerTab();
+}
+
+function buildWeatherCard() {
+  const w = state.weather;
+
+  if (w.loading) return `
+    <div class="card wi-card">
+      <h2>🌤 Weather Advisory</h2>
+      <p class="wi-loading">Fetching tonight's forecast…</p>
+    </div>`;
+
+  if (w.forecastLow !== null && !w.error) {
+    const impact = weatherImpact(w.forecastLow);
+    const stale  = w.fetchedMs && (Date.now() - w.fetchedMs > WEATHER_CACHE_MS);
+    const fetchedStr = w.fetchedMs ? new Date(w.fetchedMs).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : '';
+    return `
+      <div class="card wi-card">
+        <h2>🌤 Weather Advisory</h2>
+        <div class="wi-row"><span class="wi-label">Tonight's Forecast Low</span><span class="wi-val">${w.forecastLow}°F</span></div>
+        <div class="wi-row"><span class="wi-label">Weather Impact</span><span class="wi-badge ${impact.css}">${impact.level}</span></div>
+        <div class="wi-advisory-row">${impact.advisory}</div>
+        ${stale
+          ? `<button class="wi-action-btn" onclick="refreshWeather()">↻ Forecast may be outdated — Refresh</button>`
+          : `<p class="wi-fetched">Updated ${fetchedStr} · <button class="wi-link-btn" onclick="refreshWeather()">Refresh</button> · <button class="wi-link-btn" onclick="clearWeatherLocation()">Change location</button></p>`}
+        <p class="wi-disclaimer">Weather guidance is informational only and does not modify runtime estimates.</p>
+      </div>`;
+  }
+
+  // Setup / error state
+  return `
+    <div class="card wi-card">
+      <h2>🌤 Weather Advisory</h2>
+      ${w.error ? `<p class="wi-error">⚠️ Could not retrieve forecast. Check your connection and try again.</p>` : `<p class="wi-intro">Get tonight's forecast low to see if cold temperatures may affect propane performance.</p>`}
+      <div class="wi-setup">
+        <button class="wi-gps-btn" onclick="fetchWeatherGps()">📍 Use Current Location</button>
+        <div class="wi-zip-row">
+          <input class="wi-zip-input" id="weather-zip-input" type="text" inputmode="numeric" maxlength="5" placeholder="ZIP Code" value="${w.zip || ''}">
+          <button class="wi-zip-btn" onclick="fetchWeatherZip()">Get Forecast</button>
+        </div>
+      </div>
+      <p class="wi-disclaimer">Weather guidance is informational only and does not modify runtime estimates.</p>
+    </div>`;
 }
 
 const TABS = ['ftracker','calc','tests','fuel','ambient','about'];
@@ -1674,6 +1817,11 @@ function showTab(id) {
   if (id === 'ftracker') {
     renderFuelTrackerTab();
     startFtTickTimer();
+    // Auto-refresh stale weather in background
+    const w = state.weather;
+    if (w.lat && w.lon && w.fetchedMs && (Date.now() - w.fetchedMs > WEATHER_CACHE_MS)) {
+      refreshWeather();
+    }
   }
   if (id !== 'ftracker') stopFtTickTimer();
 }
@@ -1700,6 +1848,10 @@ window.confirmFtPropane      = confirmFtPropane;
 window.confirmFtGas          = confirmFtGas;
 window.ftStopTracking        = ftStopTracking;
 window.ftResetTracking       = ftResetTracking;
+window.fetchWeatherGps      = fetchWeatherGps;
+window.fetchWeatherZip      = fetchWeatherZip;
+window.refreshWeather       = refreshWeather;
+window.clearWeatherLocation = clearWeatherLocation;
 window.addTest = addTest;
 window.deleteTest = deleteTest;
 window.updateTest = updateTest;
