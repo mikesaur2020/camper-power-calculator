@@ -194,6 +194,13 @@ function renderCalculator() {
 
   // Sync fuel burn tab
   updateFuelDisplay(running);
+
+  // Keep warnings in sync regardless of what triggered the recalc
+  const highLoadOn = ['micro','toaster','coffee','hairdryer','iron'].some(i => state.appliances[i]);
+  const hlWarn = document.getElementById('highload-warn');
+  if (hlWarn) hlWarn.style.display = (highLoadOn && state.appliances['ac_cool']) ? 'block' : 'none';
+  const acWarn = document.getElementById('ac-warn');
+  if (acWarn) acWarn.style.display = 'none';
 }
 
 // ── Render: Appliance groups ──────────────────────────────────────────────────
@@ -409,11 +416,6 @@ function toggleAppliance(id) {
   }
 
   state.appliances[id] = checked;
-
-  // Warn if high-load + A/C cooling both on
-  const highLoadOn = ['micro','toaster','coffee','hairdryer','iron'].some(i => state.appliances[i]);
-  const hlWarn = document.getElementById('highload-warn');
-  if (hlWarn) hlWarn.style.display = (highLoadOn && state.appliances['ac_cool']) ? 'block' : 'none';
 
   saveState();
   renderCalculator();
@@ -751,13 +753,8 @@ document.addEventListener('DOMContentLoaded', () => {
     btn.classList.toggle('active', ['full','partial','heavy'][i] === state.battery);
   });
 
-  renderCalculator();
+  renderCalculator();  // also sets warnings via renderCalculator
   showTab('calc');
-
-  // High-load warning initial state
-  const highLoadOn = ['micro','toaster','coffee','hairdryer','iron'].some(i => state.appliances[i]);
-  const hlWarn = document.getElementById('highload-warn');
-  if (hlWarn) hlWarn.style.display = (highLoadOn && state.appliances['ac_cool']) ? 'block' : 'none';
 
   // Service Worker
   if ('serviceWorker' in navigator) {
