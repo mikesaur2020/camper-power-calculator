@@ -63,6 +63,41 @@ Then open: [http://localhost:8000](http://localhost:8000)
 
 ---
 
+## WEN DF360iX Auto Fuel Selection
+
+Per the owner's manual:
+
+> "LPG is prioritized. If a propane tank with enough LPG is connected, the generator will automatically use LPG. The LPG regulator hose must be disconnected for the generator to switch to gasoline. If the LPG regulator hose is connected and you run out of LPG, the generator will not automatically switch to gasoline."
+
+**What this means in the app:**
+
+| Scenario | Active Fuel | Gasoline |
+|---|---|---|
+| Propane connected | 🔥 Propane | Reserve only — not consumed |
+| Propane not connected | ⛽ Gasoline | Active |
+| Neither | — | Generator cannot run |
+
+**Gasoline reserve runtime** (shown when propane is connected) represents how long the gasoline tank would last *after* a manual fuel switch — not how long it's currently running.
+
+**To switch from propane to gasoline:**
+1. Shut down or allow generator to stop when propane is exhausted
+2. Disconnect the LPG regulator hose
+3. Restart the generator
+4. Generator will now run on gasoline
+
+**Combined runtime** = propane runtime + gasoline reserve runtime. Requires the manual 4-step transition above.
+
+---
+
+## Live Fuel Tracker vs Fuel Burn Reference
+
+| Tab | Purpose |
+|---|---|
+| **Live Fuel Tracker** | Primary tab. "How long do I have?" Active/reserve fuel, overnight confidence, session tracking |
+| **Fuel Burn Reference** | Static planning tables. Burn rates at different load levels, runtime comparisons |
+
+---
+
 ## File structure
 
 ```
@@ -73,6 +108,8 @@ manifest.json       PWA manifest (name, theme color, icons)
 service-worker.js   Offline caching
 icon-192.png        PWA icon (192×192)
 icon-512.png        PWA icon (512×512)
+PROJECT_VISION.md   Equipment specs and design decisions
+AI_HANDOFF.md       Feature inventory, known issues, future enhancements
 README.md           This file
 ```
 

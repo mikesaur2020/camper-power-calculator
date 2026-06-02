@@ -1019,6 +1019,18 @@ nav button.active {
   line-height: 1.5;
 }
 .ft-combo-list li strong { color: var(--text); }
+.ft-combo-steps-label {
+  color: var(--text) !important;
+  font-weight: 600 !important;
+  margin-top: 6px;
+  font-size: 0.75rem !important;
+}
+.ft-combo-step {
+  padding-left: 10px;
+  border-left: 2px solid var(--border);
+  color: var(--text) !important;
+  font-size: 0.75rem !important;
+}
 
 /* ── Real-World Tests ── */
 .tests-table-wrap { overflow-x: auto; }

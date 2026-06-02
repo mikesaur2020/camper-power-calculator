@@ -44,11 +44,16 @@ Fuel burn specs (WEN / Home Depot):
 The generator runs primarily for A/C comfort. The app is designed around near-continuous generator use while boondocking, not occasional supplemental use.
 
 ### Auto Fuel Selection (WEN DF360iX)
-The WEN DF360iX uses **Auto Fuel Selection**: propane (LPG) is prioritized automatically when a propane tank is connected. The generator only switches to gasoline after the LPG regulator hose is **manually disconnected**. There is no automatic fuel switchover.
+The WEN DF360iX uses **Auto Fuel Selection**. Per the owner's manual:
 
-- **Propane is the primary fuel** (lower running capacity, longer total runtime on a 20 lb tank)
-- **Gasoline is the reserve fuel** (not consumed while propane is connected)
-- Combined runtime always requires a manual hose disconnect between fuels
+> "LPG is prioritized; this means that if a propane tank with enough LPG is connected, the generator will automatically use LPG. If no propane tank is connected, the generator will use gasoline. The LPG regulator hose must be disconnected for the generator to switch to gasoline. If the LPG regulator hose is connected and you run out of LPG, the generator will not automatically switch to gasoline."
+
+Key implications for this app:
+- **Propane is the active fuel** when connected. Gasoline is not consumed.
+- **Gasoline is reserve fuel** — available only after manual LPG hose disconnect.
+- **No automatic switchover.** If propane runs out with the hose connected, the generator stops.
+- **Combined runtime** assumes: propane depleted → generator stops → user disconnects LPG hose → generator restarts on gasoline. This is a manual multi-step process.
+- The app shows gasoline as RESERVE (not as actively depleting) while propane is connected. Gasoline burn rate is not displayed in reserve mode to avoid implying it is being consumed.
 
 ### Starlink Always On
 Starlink Mini stays on continuously, including overnight when the generator is running. Generator power supports the 12V/120V system, so Starlink draws negligible net battery impact.

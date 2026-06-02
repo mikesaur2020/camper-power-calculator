@@ -59,11 +59,19 @@ Token is short-lived — user will provide a fresh one.
 ### Live Fuel Tracker (primary tab)
 - Fuel configuration: Propane Connected / Gasoline Available toggles
 - Active fuel source derived from WEN auto-select rules (propane priority)
-- Runtime cards: propane (active), gasoline (reserve — shows reserve-after-propane timing)
-- Combined Potential Runtime with correct sequential timing
-- Overnight Confidence split: Propane Only + Combined (manual switch)
+- **Propane card**: ACTIVE badge, runtime hrs, burn rate (lb/hr), est. empty time
+- **Gasoline card when propane is connected**: RESERVE badge, reserve runtime (hrs), "usable after propane at [time]", combined empty time. Burn rate is intentionally hidden — gasoline is not being consumed.
+- **Gasoline card when propane is not connected**: ACTIVE badge, full runtime and burn rate shown
+- Combined Potential Runtime: sequential (propane runtime + gasoline runtime), combined empty time
+- Overnight Confidence split into two columns: Propane Only + Combined (manual switch)
+- Fuel Combination Guidance card: active/reserve explanation + numbered 4-step manual switchover procedure
 - Session tracking: start/stop/reset, load change detection, localStorage persist
-- Fuel Combination Guidance card explains the active scenario
+
+**Auto Fuel Selection modeling (source: WEN DF360iX owner's manual):**
+- Propane connected → propane is active, gasoline is NOT consumed
+- Propane exhausted with hose connected → generator STOPS (no auto-switch)
+- Manual transition: stop → disconnect LPG hose → restart → gasoline active
+- App never shows gasoline as depleting while propane is connected
 
 ### Calculator
 - 16 appliances with toggle switches
