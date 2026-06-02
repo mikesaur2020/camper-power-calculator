@@ -1036,6 +1036,7 @@ document.addEventListener('DOMContentLoaded', () => {
   renderCalculator();  // also sets warnings via renderCalculator
   renderPresetButtons();
   showTab('calc');
+  window.scrollTo(0, 0);
 
   // Service Worker
   if ('serviceWorker' in navigator) {
