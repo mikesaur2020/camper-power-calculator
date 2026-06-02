@@ -69,10 +69,10 @@ header p {
 .header-collapse-btn:hover { background: rgba(96,165,250,0.25); }
 .header-manage-btn {
   flex: 0 0 auto;
-  background: rgba(167,139,250,0.15);
-  border: 1px solid rgba(167,139,250,0.4);
+  background: rgba(96,165,250,0.15);
+  border: 1px solid rgba(96,165,250,0.4);
   border-radius: 8px;
-  color: #a78bfa;
+  color: #60a5fa;
   cursor: pointer;
   font-size: 0.75rem;
   font-weight: 700;
@@ -81,7 +81,7 @@ header p {
   letter-spacing: 0.03em;
   min-height: 44px;
 }
-.header-manage-btn:hover { background: rgba(167,139,250,0.25); }
+.header-manage-btn:hover { background: rgba(96,165,250,0.25); }
 
 /* ── Quick Presets ── */
 .preset-card { padding-bottom: 10px; }
