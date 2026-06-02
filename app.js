@@ -53,10 +53,22 @@ const DUTY_TABLE    = [
 const AC_RUN_W = 1700;
 const AC_FAN_W = 250;
 
+// ── Elevation derating ────────────────────────────────────────────────────────
+// ~3.5% power loss per 1,000 ft above sea level (standard rule of thumb)
+const DERATE_PER_1000FT = 0.035;
+function deratedGen(elevFt) {
+  const factor = Math.max(0, 1 - (elevFt / 1000) * DERATE_PER_1000FT);
+  return {
+    gas:  { running: Math.round(GEN.gas.running  * factor), peak: Math.round(GEN.gas.peak  * factor) },
+    prop: { running: Math.round(GEN.prop.running * factor), peak: Math.round(GEN.prop.peak * factor) },
+  };
+}
+
 // ── State ─────────────────────────────────────────────────────────────────────
 const state = {
   appliances: Object.fromEntries(APPLIANCES.map(a => [a.id, a.on])),
   battery: 'full',
+  elevation: 0,
   tests: [],
 };
 
@@ -66,6 +78,7 @@ function loadState() {
     const saved = JSON.parse(localStorage.getItem('camperPowerState') || '{}');
     if (saved.appliances) Object.assign(state.appliances, saved.appliances);
     if (saved.battery)    state.battery = saved.battery;
+    if (saved.elevation != null) state.elevation = saved.elevation;
     if (saved.tests)      state.tests = saved.tests;
   } catch (_) {}
 }
@@ -74,6 +87,7 @@ function saveState() {
   localStorage.setItem('camperPowerState', JSON.stringify({
     appliances: state.appliances,
     battery: state.battery,
+    elevation: state.elevation,
     tests: state.tests,
   }));
 }
@@ -139,8 +153,9 @@ function fmtHead(w) {
 // ── Render: Calculator ────────────────────────────────────────────────────────
 function renderCalculator() {
   const { running, maxSurge, peak, battLoad } = calcLoads();
-  const gas  = fuelStatus(running, peak, GEN.gas.running,  GEN.gas.peak);
-  const prop = fuelStatus(running, peak, GEN.prop.running, GEN.prop.peak);
+  const derated = deratedGen(state.elevation);
+  const gas  = fuelStatus(running, peak, derated.gas.running,  derated.gas.peak);
+  const prop = fuelStatus(running, peak, derated.prop.running, derated.prop.peak);
 
   // Results
   document.getElementById('res-running').textContent = fmtW(running);
@@ -148,12 +163,22 @@ function renderCalculator() {
   document.getElementById('res-peak').textContent    = fmtW(peak);
   document.getElementById('res-batt').textContent    = fmtW(battLoad);
 
+  // Elevation indicator
+  const elevEl = document.getElementById('res-elev');
+  if (elevEl) {
+    const deratePct = Math.round((1 - derated.gas.running / GEN.gas.running) * 100);
+    elevEl.textContent = state.elevation > 0
+      ? `${state.elevation.toLocaleString()} ft — ~${deratePct}% derating applied`
+      : 'Sea level (no derating)';
+  }
+
   // Gas status
   const gasBadge = document.getElementById('gas-badge');
   gasBadge.textContent = gas.label;
   gasBadge.className = 'status-badge status-' + gas.status;
   document.getElementById('gas-run-head').innerHTML = fmtHead(gas.runHead);
   document.getElementById('gas-peak-head').innerHTML = fmtHead(gas.peakHead);
+  document.getElementById('gas-capacity').textContent = `${derated.gas.running.toLocaleString()}W / ${derated.gas.peak.toLocaleString()}W peak`;
 
   // Propane status
   const propBadge = document.getElementById('prop-badge');
@@ -161,6 +186,7 @@ function renderCalculator() {
   propBadge.className = 'status-badge status-' + prop.status;
   document.getElementById('prop-run-head').innerHTML = fmtHead(prop.runHead);
   document.getElementById('prop-peak-head').innerHTML = fmtHead(prop.peakHead);
+  document.getElementById('prop-capacity').textContent = `${derated.prop.running.toLocaleString()}W / ${derated.prop.peak.toLocaleString()}W peak`;
 
   // Running % display
   document.getElementById('gas-run-pct').textContent  = Math.round(gas.runPct * 100) + '% of running capacity';
@@ -204,6 +230,29 @@ function buildCalculatorHTML() {
       <p><strong>Temporary high-load mode:</strong> Switch A/C to Fan Only before running microwave, toaster, coffee maker, hair dryer, or clothes iron.</p>
     </div>
 
+    <!-- Elevation -->
+    <div class="card">
+      <h2>Elevation</h2>
+      <div class="elev-row">
+        <div class="elev-input-wrap">
+          <input type="number" id="elev-input" min="0" max="14000" step="100"
+            value="${state.elevation}"
+            oninput="setElevation(this.value)"
+            placeholder="0">
+          <span class="elev-unit">ft</span>
+        </div>
+        <div class="elev-presets">
+          <button class="preset-btn" onclick="setElevationPreset(0)">Sea level</button>
+          <button class="preset-btn" onclick="setElevationPreset(1400)">Sioux Falls</button>
+          <button class="preset-btn" onclick="setElevationPreset(5280)">Denver</button>
+          <button class="preset-btn" onclick="setElevationPreset(7000)">7,000 ft</button>
+          <button class="preset-btn" onclick="setElevationPreset(9000)">9,000 ft</button>
+          <button class="preset-btn" onclick="setElevationPreset(11000)">11,000 ft</button>
+        </div>
+      </div>
+      <div class="elev-note" id="res-elev">Sea level (no derating)</div>
+    </div>
+
     <!-- Results -->
     <div class="card">
       <h2>Generator Load Summary</h2>
@@ -232,6 +281,7 @@ function buildCalculatorHTML() {
           <h3 class="gas">⛽ Gasoline</h3>
           <div id="gas-badge" class="status-badge">—</div>
           <div class="result-sub" id="gas-run-pct"></div>
+          <div class="headroom-row"><span>Effective capacity</span><span id="gas-capacity" style="color:var(--text-muted);font-size:0.68rem">—</span></div>
           <div class="headroom-row"><span>Running headroom</span><span id="gas-run-head">—</span></div>
           <div class="headroom-row"><span>Peak headroom</span><span id="gas-peak-head">—</span></div>
         </div>
@@ -239,6 +289,7 @@ function buildCalculatorHTML() {
           <h3 class="propane">🔵 Propane</h3>
           <div id="prop-badge" class="status-badge">—</div>
           <div class="result-sub" id="prop-run-pct"></div>
+          <div class="headroom-row"><span>Effective capacity</span><span id="prop-capacity" style="color:var(--text-muted);font-size:0.68rem">—</span></div>
           <div class="headroom-row"><span>Running headroom</span><span id="prop-run-head">—</span></div>
           <div class="headroom-row"><span>Peak headroom</span><span id="prop-peak-head">—</span></div>
         </div>
@@ -305,6 +356,21 @@ function buildCalculatorHTML() {
       ${other.map(buildApplianceRow).join('')}
     </div>
   `;
+}
+
+function setElevation(val) {
+  const ft = Math.max(0, Math.min(14000, parseInt(val) || 0));
+  state.elevation = ft;
+  saveState();
+  renderCalculator();
+}
+
+function setElevationPreset(ft) {
+  state.elevation = ft;
+  const input = document.getElementById('elev-input');
+  if (input) input.value = ft;
+  saveState();
+  renderCalculator();
 }
 
 function toggleSection(bodyId, heading) {
@@ -662,6 +728,8 @@ function showTab(id) {
 // ── Boot ──────────────────────────────────────────────────────────────────────
 window.toggleAppliance = toggleAppliance;
 window.toggleSection = toggleSection;
+window.setElevation = setElevation;
+window.setElevationPreset = setElevationPreset;
 window.setBattery = setBattery;
 window.addTest = addTest;
 window.deleteTest = deleteTest;
