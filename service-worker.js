@@ -1,4 +1,4 @@
-const CACHE_NAME = 'camper-power-v14';
+const CACHE_NAME = 'camper-power-v15';
 const ASSETS = [
   './',
   './index.html',

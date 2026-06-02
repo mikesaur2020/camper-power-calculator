@@ -19,6 +19,7 @@
         <h1>⚡ Mike's Camper Power Calculator</h1>
         <p>WEN DF360iX · Coachmen Apex 28RBS · Generator-only camping</p>
       </div>
+      <button class="header-manage-btn" onclick="openManagePresets()">Manage Presets</button>
       <button class="header-collapse-btn" onclick="collapseAll()">Collapse All</button>
     </div>
   </header>
@@ -64,6 +65,25 @@
     <div id="panel-about"   class="tab-panel"></div>
   </main>
 
-  <script src="app.js?v=14"></script>
+  <!-- Manage Presets Modal -->
+  <div id="preset-modal" style="display:none" class="modal-overlay" onclick="if(event.target===this)closeManagePresets()">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h2>Manage Presets</h2>
+        <button class="modal-close-btn" onclick="closeManagePresets()">✕</button>
+      </div>
+      <div id="modal-preset-list" class="modal-preset-list"></div>
+      <div class="modal-save-section">
+        <p class="modal-save-label">Save current settings as a new preset:</p>
+        <div class="modal-save-row">
+          <input type="text" id="new-preset-name" placeholder="Preset name…" maxlength="30"
+            onkeydown="if(event.key==='Enter')submitSavePreset()">
+          <button class="modal-save-btn" onclick="submitSavePreset()">Save</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js?v=15"></script>
 </body>
 </html>

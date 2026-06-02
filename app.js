@@ -64,22 +64,51 @@ function deratedGen(elevFt) {
   };
 }
 
+// ── Built-in presets ──────────────────────────────────────────────────────────
+function makeAppliances(onIds) {
+  return Object.fromEntries(APPLIANCES.map(a => [a.id, onIds.includes(a.id)]));
+}
+const BUILT_IN_PRESETS = [
+  {
+    id: 'normal-ac', name: 'Normal A/C', builtIn: true, battery: 'full', elevation: 1400,
+    appliances: makeAppliances(['ac_cool','fridge','starlink','usb','tv','leds']),
+  },
+  {
+    id: 'microwave', name: 'Microwave', builtIn: true, battery: 'full', elevation: 1400,
+    appliances: makeAppliances(['ac_fan','fridge','starlink','usb','tv','micro','leds']),
+  },
+  {
+    id: 'coffee', name: 'Coffee Time', builtIn: true, battery: 'full', elevation: 1400,
+    appliances: makeAppliances(['ac_fan','fridge','starlink','usb','tv','coffee','leds']),
+  },
+  {
+    id: 'hairdryer', name: 'Hair Dryer', builtIn: true, battery: 'full', elevation: 1400,
+    appliances: makeAppliances(['ac_fan','fridge','starlink','usb','hairdryer','leds']),
+  },
+  {
+    id: 'overnight', name: 'Overnight', builtIn: true, battery: 'full', elevation: 1400,
+    appliances: makeAppliances(['ac_cool','fridge','starlink','leds']),
+  },
+];
+
 // ── State ─────────────────────────────────────────────────────────────────────
 const state = {
   appliances: Object.fromEntries(APPLIANCES.map(a => [a.id, a.on])),
   battery: 'full',
   elevation: 1400,
   tests: [],
+  userPresets: [],
 };
 
 // ── Persistence ───────────────────────────────────────────────────────────────
 function loadState() {
   try {
     const saved = JSON.parse(localStorage.getItem('camperPowerState') || '{}');
-    if (saved.appliances) Object.assign(state.appliances, saved.appliances);
-    if (saved.battery)    state.battery = saved.battery;
+    if (saved.appliances)  Object.assign(state.appliances, saved.appliances);
+    if (saved.battery)     state.battery = saved.battery;
     if (saved.elevation != null) state.elevation = saved.elevation;
-    if (saved.tests)      state.tests = saved.tests;
+    if (saved.tests)       state.tests = saved.tests;
+    if (saved.userPresets) state.userPresets = saved.userPresets;
   } catch (_) {}
 }
 
@@ -89,6 +118,7 @@ function saveState() {
     battery: state.battery,
     elevation: state.elevation,
     tests: state.tests,
+    userPresets: state.userPresets,
   }));
 }
 
@@ -255,6 +285,12 @@ function buildCalculatorHTML() {
       </div>
       <p><strong>Normal mode:</strong> A/C Cooling + Refrigerator + Starlink + USB + TV</p>
       <p><strong>Temporary high-load mode:</strong> Switch A/C to Fan Only before running microwave, toaster, coffee maker, hair dryer, or clothes iron.</p>
+    </div>
+
+    <!-- Presets -->
+    <div class="card preset-card">
+      <h2>Quick Presets</h2>
+      <div class="preset-btn-row" id="preset-btn-row"></div>
     </div>
 
     <!-- Elevation -->
@@ -779,6 +815,94 @@ function buildAboutHTML() {
   `;
 }
 
+// ── Presets ───────────────────────────────────────────────────────────────────
+function getAllPresets() {
+  return [...BUILT_IN_PRESETS, ...state.userPresets];
+}
+
+function renderPresetButtons() {
+  const row = document.getElementById('preset-btn-row');
+  if (!row) return;
+  row.innerHTML = getAllPresets().map(p => `
+    <button class="quick-preset-btn" onclick="applyPreset('${p.id}')">${p.name}</button>
+  `).join('');
+}
+
+function applyPreset(id) {
+  const preset = getAllPresets().find(p => p.id === id);
+  if (!preset) return;
+  Object.assign(state.appliances, preset.appliances);
+  state.battery = preset.battery;
+  state.elevation = preset.elevation;
+
+  // Sync DOM toggles
+  APPLIANCES.forEach(a => {
+    const el = document.getElementById('toggle-' + a.id);
+    if (el) el.checked = state.appliances[a.id];
+  });
+  // Sync battery buttons
+  document.querySelectorAll('.battery-btn').forEach((btn, i) => {
+    btn.classList.toggle('active', ['full','partial','heavy'][i] === state.battery);
+  });
+  // Sync elevation input + preset buttons
+  const elevInput = document.getElementById('elev-input');
+  if (elevInput) elevInput.value = state.elevation;
+  syncPresetButtons(state.elevation);
+
+  saveState();
+  renderCalculator();
+}
+
+function saveCurrentAsPreset(name) {
+  if (!name || !name.trim()) return;
+  const id = 'user-' + Date.now();
+  state.userPresets.push({
+    id,
+    name: name.trim(),
+    builtIn: false,
+    appliances: { ...state.appliances },
+    battery: state.battery,
+    elevation: state.elevation,
+  });
+  saveState();
+  renderPresetButtons();
+  renderManageModal();
+}
+
+function deleteUserPreset(id) {
+  state.userPresets = state.userPresets.filter(p => p.id !== id);
+  saveState();
+  renderPresetButtons();
+  renderManageModal();
+}
+
+function openManagePresets() {
+  renderManageModal();
+  document.getElementById('preset-modal').style.display = 'flex';
+}
+
+function closeManagePresets() {
+  document.getElementById('preset-modal').style.display = 'none';
+}
+
+function renderManageModal() {
+  const list = document.getElementById('modal-preset-list');
+  if (!list) return;
+  const all = getAllPresets();
+  list.innerHTML = all.map(p => `
+    <div class="modal-preset-row">
+      <span class="modal-preset-name">${escHtml(p.name)}${p.builtIn ? ' <span class="built-in-tag">built-in</span>' : ''}</span>
+      ${!p.builtIn ? `<button class="modal-delete-btn" onclick="deleteUserPreset('${p.id}')">Delete</button>` : ''}
+    </div>
+  `).join('');
+}
+
+function submitSavePreset() {
+  const input = document.getElementById('new-preset-name');
+  saveCurrentAsPreset(input.value);
+  input.value = '';
+}
+
 // ── Tab routing ───────────────────────────────────────────────────────────────
 const TABS = ['calc','tests','fuel','ambient','about'];
 
@@ -802,6 +926,11 @@ window.addTest = addTest;
 window.deleteTest = deleteTest;
 window.updateTest = updateTest;
 window.showTab = showTab;
+window.applyPreset = applyPreset;
+window.openManagePresets = openManagePresets;
+window.closeManagePresets = closeManagePresets;
+window.deleteUserPreset = deleteUserPreset;
+window.submitSavePreset = submitSavePreset;
 
 document.addEventListener('DOMContentLoaded', () => {
   loadState();
@@ -819,6 +948,7 @@ document.addEventListener('DOMContentLoaded', () => {
   syncPresetButtons(state.elevation);
 
   renderCalculator();  // also sets warnings via renderCalculator
+  renderPresetButtons();
   showTab('calc');
 
   // Service Worker
