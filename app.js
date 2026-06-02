@@ -115,10 +115,6 @@ const state = {
   activePresetId: 'normal-ac',
   quickStartCollapsed: false,
   welcomeDismissed: false,
-  fuelTracker: {
-    gas:  { active: false, startMs: null, startGal: 1.5 },
-    prop: { active: false, startMs: null, startLb:  20  },
-  },
   // New Fuel Tracker tab
   ft: {
     propaneConnected: true,
@@ -144,7 +140,6 @@ function loadState() {
     if (saved.userPresets)    state.userPresets = saved.userPresets;
     if (saved.hiddenBuiltIns) state.hiddenBuiltIns = saved.hiddenBuiltIns;
     if (saved.activePresetId !== undefined) state.activePresetId = saved.activePresetId;
-    if (saved.fuelTracker) Object.assign(state.fuelTracker, saved.fuelTracker);
     if (saved.ft) Object.assign(state.ft, saved.ft);
     if (saved.quickStartCollapsed != null) state.quickStartCollapsed = saved.quickStartCollapsed;
     if (saved.welcomeDismissed != null)    state.welcomeDismissed    = saved.welcomeDismissed;
@@ -162,7 +157,6 @@ function saveState() {
     userPresets: state.userPresets,
     hiddenBuiltIns: state.hiddenBuiltIns,
     activePresetId: state.activePresetId,
-    fuelTracker: state.fuelTracker,
     ft: state.ft,
     quickStartCollapsed: state.quickStartCollapsed,
     welcomeDismissed:    state.welcomeDismissed,
@@ -221,6 +215,19 @@ function fmt(n, decimals = 1) {
   return n.toFixed(decimals);
 }
 function fmtW(w) { return w.toLocaleString() + 'W'; }
+function fmtTime(ms) {
+  const d = new Date(ms);
+  return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+}
+function fmtElapsed(ms) {
+  const h = Math.floor(ms / 3600000);
+  const m = Math.floor((ms % 3600000) / 60000);
+  return h > 0 ? `${h}h ${m}m` : `${m}m`;
+}
+function trackerBurnRates(loadW) {
+  const { gasGalHr, gasHrsPerTank, propLbHr, propHrsPer20lb } = estFuelBurn(loadW);
+  return { gasGalHr, gasHrsPerTank, propLbHr, propHrsPer20lb };
+}
 function fmtHead(w) {
   const cls = w >= 0 ? 'headroom-pos' : 'headroom-neg';
   const sign = w >= 0 ? '+' : '';
@@ -309,9 +316,6 @@ function renderCalculator() {
   // Running % display
   document.getElementById('gas-run-pct').textContent  = Math.round(gas.runPct * 100) + '% of running capacity';
   document.getElementById('prop-run-pct').textContent = Math.round(prop.runPct * 100) + '% of running capacity';
-
-  // Sync fuel burn tab
-  updateFuelDisplay(running);
 
   // Load status banner
   const banner = document.getElementById('load-banner');
@@ -815,178 +819,6 @@ function escHtml(s) {
 }
 
 // ── Fuel tracker helpers ──────────────────────────────────────────────────────
-let fuelTickInterval = null;
-
-function fmtElapsed(ms) {
-  if (!ms || ms < 0) return '0m';
-  const h = Math.floor(ms / 3600000);
-  const m = Math.floor((ms % 3600000) / 60000);
-  return h > 0 ? `${h}h ${m}m` : `${m}m`;
-}
-
-function fmtTime(ms) {
-  if (!ms) return '—';
-  return new Date(ms).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
-}
-
-function trackerBurnRates(loadW) {
-  const { gasGalHr, propLbHr } = estFuelBurn(loadW);
-  return { gasGalHr, propLbHr };
-}
-
-function startFuelTracker(type, customGal, customLb) {
-  const now = Date.now();
-  const { running } = calcLoads();
-  if (type === 'gas' || type === 'both') {
-    state.fuelTracker.gas = { active: true, startMs: now, startGal: customGal ?? 1.5, loadW: running };
-  }
-  if (type === 'prop' || type === 'both') {
-    state.fuelTracker.prop = { active: true, startMs: now, startLb: customLb ?? 20, loadW: running };
-  }
-  saveState();
-  renderFuelTracker();
-}
-
-function stopFuelTracker(type) {
-  if (type === 'gas'  || type === 'both') state.fuelTracker.gas  = { active: false, startMs: null, startGal: 1.5 };
-  if (type === 'prop' || type === 'both') state.fuelTracker.prop = { active: false, startMs: null, startLb:  20  };
-  saveState();
-  renderFuelTracker();
-}
-
-function renderFuelTracker() {
-  const { running } = calcLoads();
-  const { gasGalHr, propLbHr } = trackerBurnRates(running);
-  const now = Date.now();
-  const gt = state.fuelTracker.gas;
-  const pt = state.fuelTracker.prop;
-
-  // Gas card
-  const gasEl = document.getElementById('tracker-gas');
-  if (gasEl) {
-    if (gt.active && gt.startMs) {
-      const elapsedMs    = now - gt.startMs;
-      const burnedGal    = (elapsedMs / 3600000) * gasGalHr;
-      const remainGal    = Math.max(0, gt.startGal - burnedGal);
-      const remainHrs    = gasGalHr > 0 ? remainGal / gasGalHr : Infinity;
-      const emptyMs      = gt.startMs + (gt.startGal / gasGalHr) * 3600000;
-      gasEl.innerHTML = `
-        <div class="tracker-stat-row">
-          <span class="tracker-label">Elapsed</span>
-          <span class="tracker-val">${fmtElapsed(elapsedMs)}</span>
-        </div>
-        <div class="tracker-stat-row">
-          <span class="tracker-label">Current burn rate</span>
-          <span class="tracker-val">${fmt(gasGalHr, 2)} gal/hr</span>
-        </div>
-        <div class="tracker-stat-row">
-          <span class="tracker-label">Est. remaining</span>
-          <span class="tracker-val tracker-remain ${remainGal < 0.3 ? 'tracker-warn' : ''}">${fmt(remainGal, 2)} gal</span>
-        </div>
-        <div class="tracker-stat-row">
-          <span class="tracker-label">Est. time left</span>
-          <span class="tracker-val tracker-remain ${remainHrs < 0.5 ? 'tracker-warn' : ''}">${fmt(remainHrs)} hrs</span>
-        </div>
-        <div class="tracker-stat-row">
-          <span class="tracker-label">Est. empty at</span>
-          <span class="tracker-val">${fmtTime(emptyMs)}</span>
-        </div>
-        <div class="tracker-stat-row">
-          <span class="tracker-label">Started</span>
-          <span class="tracker-val">${fmtTime(gt.startMs)} · ${fmt(gt.startGal, 1)} gal</span>
-        </div>
-        <button class="tracker-stop-btn" onclick="stopFuelTracker('gas')">⏹ Stop Gas Tracker</button>`;
-    } else {
-      gasEl.innerHTML = `
-        <p class="tracker-idle">Not running.</p>
-        <button class="tracker-start-btn tracker-gas-btn tracker-card-start-btn" onclick="startFuelTracker('gas')">
-          ⛽ Start Gas Tracker
-          <span class="tracker-btn-sub">Full 1.5 gal tank</span>
-        </button>`;
-    }
-  }
-
-  // Propane card
-  const propEl = document.getElementById('tracker-prop');
-  if (propEl) {
-    if (pt.active && pt.startMs) {
-      const elapsedMs  = now - pt.startMs;
-      const burnedLb   = (elapsedMs / 3600000) * propLbHr;
-      const remainLb   = Math.max(0, pt.startLb - burnedLb);
-      const remainHrs  = propLbHr > 0 ? remainLb / propLbHr : Infinity;
-      const emptyMs    = pt.startMs + (pt.startLb / propLbHr) * 3600000;
-      propEl.innerHTML = `
-        <div class="tracker-stat-row">
-          <span class="tracker-label">Elapsed</span>
-          <span class="tracker-val">${fmtElapsed(elapsedMs)}</span>
-        </div>
-        <div class="tracker-stat-row">
-          <span class="tracker-label">Current burn rate</span>
-          <span class="tracker-val">${fmt(propLbHr, 2)} lb/hr</span>
-        </div>
-        <div class="tracker-stat-row">
-          <span class="tracker-label">Est. remaining</span>
-          <span class="tracker-val tracker-remain ${remainLb < 2 ? 'tracker-warn' : ''}">${fmt(remainLb, 1)} lb</span>
-        </div>
-        <div class="tracker-stat-row">
-          <span class="tracker-label">Est. time left</span>
-          <span class="tracker-val tracker-remain ${remainHrs < 0.5 ? 'tracker-warn' : ''}">${fmt(remainHrs)} hrs</span>
-        </div>
-        <div class="tracker-stat-row">
-          <span class="tracker-label">Est. empty at</span>
-          <span class="tracker-val">${fmtTime(emptyMs)}</span>
-        </div>
-        <div class="tracker-stat-row">
-          <span class="tracker-label">Started</span>
-          <span class="tracker-val">${fmtTime(pt.startMs)} · ${fmt(pt.startLb, 0)} lb</span>
-        </div>
-        <button class="tracker-stop-btn" onclick="stopFuelTracker('prop')">⏹ Stop Propane Tracker</button>`;
-    } else {
-      propEl.innerHTML = `
-        <p class="tracker-idle">Not running.</p>
-        <button class="tracker-start-btn tracker-prop-btn tracker-card-start-btn" onclick="startFuelTracker('prop')">
-          🔵 Start Propane Tracker
-          <span class="tracker-btn-sub">Full 20 lb tank</span>
-        </button>`;
-    }
-  }
-
-  // Live load line
-  const loadEl = document.getElementById('tracker-load');
-  if (loadEl) loadEl.textContent = `Based on current load: ${fmtW(running)} — burn rates update live as you change appliances.`;
-}
-
-function startFuelTickTimer() {
-  if (fuelTickInterval) clearInterval(fuelTickInterval);
-  fuelTickInterval = setInterval(() => {
-    if (document.getElementById('tracker-gas')) renderFuelTracker();
-  }, 30000); // refresh every 30 seconds
-}
-
-function stopFuelTickTimer() {
-  if (fuelTickInterval) { clearInterval(fuelTickInterval); fuelTickInterval = null; }
-}
-
-// ── Render: Fuel Burn (legacy display — synced from Calculator) ───────────────
-function updateFuelDisplay(currentLoad) {
-  // Update the burn rate summary used inside the Fuel tab's reference section
-  const summaryEl = document.getElementById('fuel-rate-summary');
-  if (!summaryEl) return;
-  const { gasGalHr, gasHrsPerTank, propLbHr, propHrsPer20lb } = estFuelBurn(currentLoad);
-  summaryEl.innerHTML = `
-    <div class="fuel-rate-grid">
-      <div>
-        <div class="fuel-rate-label">⛽ Gasoline — current load ${fmtW(currentLoad)}</div>
-        <div class="fuel-rate-val">${fmt(gasGalHr, 2)} gal/hr &nbsp;·&nbsp; ${fmt(gasHrsPerTank)} hrs / 1.5 gal tank</div>
-      </div>
-      <div>
-        <div class="fuel-rate-label">🔵 Propane — current load ${fmtW(currentLoad)}</div>
-        <div class="fuel-rate-val">${fmt(propLbHr, 2)} lb/hr &nbsp;·&nbsp; ${fmt(propHrsPer20lb)} hrs / 20 lb tank</div>
-      </div>
-    </div>`;
-  renderFuelTracker();
-}
-
 function buildFuelHTML() {
   const rows = [0.25, 0.50, 0.75, 1.00].map(pct => {
     const gW = Math.round(GEN.gas.running  * pct);
@@ -1002,75 +834,12 @@ function buildFuelHTML() {
   });
 
   return `
-    <!-- ── Fuel Tracker ── -->
-    <div class="card">
-      <h2>Fuel Tracker</h2>
-      <p style="font-size:0.75rem;color:var(--text-muted);margin-bottom:14px;">
-        Tap a button when you start the generator on a full tank. The tracker estimates
-        remaining fuel and empty time based on your current appliance load.
-      </p>
-
-      <!-- Start buttons -->
-      <div class="tracker-start-btns">
-        <button class="tracker-start-btn tracker-gas-btn" onclick="startFuelTracker('gas')">
-          ⛽ Start Gas Tracker
-          <span class="tracker-btn-sub">Full 1.5 gal tank</span>
-        </button>
-        <button class="tracker-start-btn tracker-prop-btn" onclick="startFuelTracker('prop')">
-          🔵 Start Propane Tracker
-          <span class="tracker-btn-sub">Full 20 lb tank</span>
-        </button>
-        <button class="tracker-start-btn tracker-both-btn" onclick="startFuelTracker('both')">
-          ▶ Start Both
-          <span class="tracker-btn-sub">Full gas + propane</span>
-        </button>
-      </div>
-
-      <!-- Advanced collapsible -->
-      <details class="tracker-advanced">
-        <summary>Advanced / Manual Fuel Amounts</summary>
-        <div class="tracker-advanced-body">
-          <div class="tracker-adv-row">
-            <label>Gas start amount (gal):</label>
-            <input type="number" id="adv-gas-gal" value="1.5" min="0" max="10" step="0.1">
-          </div>
-          <div class="tracker-adv-row">
-            <label>Propane start amount (lb):</label>
-            <input type="number" id="adv-prop-lb" value="20" min="0" max="100" step="1">
-          </div>
-          <div class="tracker-adv-row" style="flex-wrap:wrap;gap:6px;">
-            <button class="tracker-adv-btn" onclick="startFuelTracker('gas',  +document.getElementById('adv-gas-gal').value, null)">Start Gas</button>
-            <button class="tracker-adv-btn" onclick="startFuelTracker('prop', null, +document.getElementById('adv-prop-lb').value)">Start Propane</button>
-            <button class="tracker-adv-btn" onclick="startFuelTracker('both', +document.getElementById('adv-gas-gal').value, +document.getElementById('adv-prop-lb').value)">Start Both</button>
-          </div>
-        </div>
-      </details>
-
-      <!-- Live load note -->
-      <p class="tracker-load-note" id="tracker-load"></p>
-    </div>
-
-    <!-- Gas + Propane tracker cards -->
-    <div class="tracker-cards-grid">
-      <div class="card tracker-fuel-card">
-        <h2 class="tracker-fuel-title gas-title">⛽ Gasoline</h2>
-        <div id="tracker-gas"><p class="tracker-idle">Not running.</p></div>
-      </div>
-      <div class="card tracker-fuel-card">
-        <h2 class="tracker-fuel-title prop-title">🔵 Propane</h2>
-        <div id="tracker-prop"><p class="tracker-idle">Not running.</p></div>
-      </div>
-    </div>
-
-    <!-- Burn rates from current load -->
-    <div class="card">
-      <h2>Current Burn Rates</h2>
-      <div id="fuel-rate-summary"><p style="font-size:0.75rem;color:var(--text-muted);">Switch to the Calculator tab and select your loads first.</p></div>
-    </div>
-
     <!-- Reference table -->
     <div class="card">
       <h2>Runtime Reference Table</h2>
+      <p style="font-size:0.8rem;color:var(--text-muted);margin-bottom:12px;">
+        Planning table for estimating runtime at different load levels — useful before you know what appliance combination you'll run.
+      </p>
       <div class="fuel-table-wrap">
         <table class="fuel-table">
           <thead>
@@ -1234,15 +1003,10 @@ function buildAboutHTML() {
     <div class="card">
       <div class="about-section">
         <h3>WEN DF360iX Auto Fuel Selection</h3>
-        <p style="font-size:0.75rem;color:var(--text-muted);margin-bottom:10px;line-height:1.6;">
-          Per the WEN DF360iX owner's manual:
+        <p style="font-size:0.75rem;color:var(--text-muted);line-height:1.6;">
+          Propane is prioritized when the LPG hose is connected; gasoline is reserve and is not consumed until you manually disconnect the hose and restart. The generator will not auto-switch fuels.
+          Full switchover steps are on the <strong>Live Fuel Tracker</strong> tab under Fuel Configuration.
         </p>
-        <ul class="guidance-list">
-          <li><span>🔥</span><span><strong>Propane is prioritized.</strong> If a propane tank with enough LPG is connected, the generator automatically uses LPG.</span></li>
-          <li><span>⛽</span><span><strong>Gasoline is reserve fuel.</strong> It is not consumed while propane is connected.</span></li>
-          <li><span>⛔</span><span><strong>No automatic switchover.</strong> If propane is exhausted with the LPG hose still connected, the generator will <em>not</em> switch to gasoline — it will stop.</span></li>
-          <li><span>🔌</span><span><strong>Manual transition required.</strong> To use gasoline after propane: shut down the generator, disconnect the LPG regulator hose, then restart. The generator will then run on gasoline.</span></li>
-        </ul>
       </div>
     </div>
 
@@ -1531,14 +1295,14 @@ function closeHelp() {
 function buildQuickStartCard() {
   if (state.quickStartCollapsed) {
     return `<div class="card qs-collapsed-bar">
-      <span>🚐 Quick Start</span>
+      <span>🚐 How to Use</span>
       <button class="qs-toggle-btn" onclick="toggleQuickStart()">Show</button>
     </div>`;
   }
   return `
     <div class="card qs-card">
       <div class="qs-header">
-        <h2>🚐 Quick Start</h2>
+        <h2>🚐 How to Use</h2>
         <button class="qs-toggle-btn" onclick="toggleQuickStart()">Hide</button>
       </div>
       <ol class="qs-list">
@@ -1556,8 +1320,8 @@ function buildQuickStartCard() {
           The presets above do this automatically.</div>
         </li>
         <li>
-          <strong>Use Fuel Burn Reference for planning</strong>
-          <div class="qs-sub">Static tables showing burn rates at different loads.</div>
+          <strong>Use the Reference tab for load planning</strong>
+          <div class="qs-sub">Static tables showing burn rates at different loads — useful before you know what you'll run.</div>
         </li>
       </ol>
     </div>`;
@@ -1613,8 +1377,7 @@ function ftComboGuidance(propane, gas) {
       <span>Propane (Active) + Gasoline (Reserve)</span>
     </div>
     <ul class="ft-combo-list">
-      <li>🔥 <strong>Active fuel: Propane.</strong> Per the WEN DF360iX owner's manual, LPG is prioritized when connected. Gasoline is <strong>not</strong> consumed while propane is connected.</li>
-      <li>⛽ <strong>Reserve fuel: Gasoline.</strong> The generator will <strong>not</strong> automatically switch to gasoline if propane runs out — you must take manual action.</li>
+      <li>🔥 <strong>Active fuel: Propane.</strong> Gasoline is not consumed while propane is connected.</li>
       <li class="ft-combo-steps-label">To switch to gasoline after propane is depleted:</li>
       <li class="ft-combo-step">1. Shut down or allow generator to stop when propane is exhausted.</li>
       <li class="ft-combo-step">2. Disconnect the LPG regulator hose from the propane tank.</li>
@@ -1653,6 +1416,12 @@ function ftComboGuidance(propane, gas) {
 
 function buildFuelTrackerHTML() {
   return `<div id="ft-panel"></div>`;
+}
+
+function calcNudge(running) {
+  const preset = getAllPresets().find(p => p.id === state.activePresetId);
+  const label = preset ? preset.name : 'Custom';
+  return `<p class="ft-calc-nudge">Showing load from Calculator: <strong>${label}</strong> — ${fmtW(running)}. <a class="ft-calc-link" onclick="showTab('calc')">Adjust appliances</a> to refine these estimates.</p>`;
 }
 
 function renderFuelTrackerTab() {
@@ -1707,13 +1476,65 @@ function renderFuelTrackerTab() {
     <!-- What am I looking at -->
     ${buildWhatAmICard()}
 
+    <!-- Fuel Tracker (moved here for quick access) -->
+    <div class="card">
+      <h2>Fuel Tracker</h2>
+
+      <!-- Status badge -->
+      <div class="ft-track-status ${ft.trackingFuel === 'propane' ? 'ft-track-prop' : ft.trackingFuel === 'gas' ? 'ft-track-gas' : 'ft-track-off'}">
+        ${ft.trackingFuel === 'propane' ? '🔥 Tracking: Propane Active'
+          : ft.trackingFuel === 'gas'   ? '⛽ Tracking: Gasoline Active'
+          : '⏸ Not Started'}
+      </div>
+
+      ${ft.trackingFuel && ft.startMs ? `
+        <div class="ft-tracking-active" style="margin-top:12px;">
+          <div class="ft-empty-row"><span>Fuel</span><span>${ft.trackingFuel === 'propane' ? '🔥 Propane' : '⛽ Gasoline'}</span></div>
+          <div class="ft-empty-row"><span>Started</span><span>${fmtTime(ft.startMs)}</span></div>
+          <div class="ft-empty-row"><span>Elapsed</span><span>${fmtElapsed(elapsedMs)}</span></div>
+          <div class="ft-empty-row"><span>Load at start</span><span>${ft.startLoadW != null ? fmtW(ft.startLoadW) : '—'}</span></div>
+          ${loadChangedNote}
+          ${ft.trackingFuel === 'propane' && ft.gasAvailable ? `
+          <p class="ft-reserve-note" style="margin-top:8px;">
+            After propane is depleted, disconnect the LPG regulator hose and restart the generator to run on gasoline.
+          </p>` : ''}
+          <div class="ft-tracking-btns">
+            <button class="tracker-stop-btn" onclick="ftStopTracking()" style="width:auto;margin-top:0;">⏹ Stop Active Tracker</button>
+            <button class="ft-reset-btn" onclick="ftResetTracking()">↺ Reset Fuel Tracker</button>
+          </div>
+        </div>
+      ` : `
+        <div class="ft-start-grid">
+          <div class="ft-start-col">
+            <button class="tracker-start-btn tracker-prop-btn tracker-card-start-btn ft-start-full"
+              onclick="${!ft.propaneConnected ? `confirmFtPropane()` : `ftStartPropaneTracker()`}">
+              🔥 Start Propane Tracker
+              <span class="tracker-btn-sub">Use when LPG hose is connected — WEN uses propane first</span>
+            </button>
+            ${!ft.propaneConnected ? `<p class="ft-start-warn">⚠️ Propane is set to Not Connected. Tapping will set it to Connected and start the propane tracker.</p>` : ''}
+          </div>
+          <div class="ft-start-col">
+            <button class="tracker-start-btn tracker-gas-btn tracker-card-start-btn ft-start-full"
+              onclick="${ft.propaneConnected ? `confirmFtGas()` : `ftStartGasTracker()`}">
+              ⛽ Start Gasoline Tracker
+              <span class="tracker-btn-sub">Use only after LPG hose is disconnected or when running gas-only</span>
+            </button>
+            ${ft.propaneConnected ? `<p class="ft-start-warn">⚠️ Propane is Connected. Tapping will set it to Disconnected and start the gasoline tracker. The WEN uses propane first if LPG is connected.</p>` : ''}
+          </div>
+        </div>
+        ${ft.startMs ? `<button class="ft-reset-btn" style="margin-top:10px;" onclick="ftResetTracking()">↺ Clear Previous Session</button>` : ''}
+      `}
+    </div>
+
     <!-- Recommended Workflows -->
     ${buildWorkflowsCard()}
 
     <!-- Fuel Configuration -->
     <div class="card">
       <h2>Fuel Configuration</h2>
-      <p class="ft-sub">The WEN DF360iX auto-selects fuel: propane is prioritized when connected.</p>
+      <p class="ft-sub" style="margin-bottom:10px;">
+        Propane is always active when the LPG hose is connected. Gasoline is reserve — see the switchover steps below.
+      </p>
       <div class="ft-config-grid">
         <div class="ft-config-item">
           <span class="ft-config-label">Propane Connected</span>
@@ -1746,7 +1567,7 @@ function renderFuelTrackerTab() {
     <div class="card ft-load-card">
       <h2>Current Generator Load</h2>
       <div class="ft-big-stat">${fmtW(running)}</div>
-      <p class="ft-sub" style="margin-top:4px;">From Calculator tab — updates live as you change appliances.</p>
+      ${calcNudge(running)}
       ${loadChangedNote}
     </div>
 
@@ -1790,9 +1611,7 @@ function renderFuelTrackerTab() {
       <div class="ft-combined-val ${combinedHrs >= 10 ? 'ft-green' : combinedHrs >= 6 ? 'ft-yellow' : 'ft-red'}">${fmt(combinedHrs)} hrs</div>
       <div class="ft-empty-row" style="margin-top:6px;"><span>Est. combined empty time</span><span>${ftEmptyTime(nowMs, combinedHrs)}</span></div>
       <p class="ft-sub" style="margin-top:8px;">
-        Combined runtime assumes propane is depleted first, then the LPG regulator hose is
-        <strong>manually disconnected</strong> before gasoline can be used.
-        The WEN DF360iX does not switch fuels automatically.
+        Propane first, then manual switch to gasoline — see switchover steps above.
       </p>
     </div>
     ` : ''}
@@ -1836,57 +1655,6 @@ function renderFuelTrackerTab() {
       </div>`;
     })()}
 
-    <!-- Fuel-Specific Tracking -->
-    <div class="card">
-      <h2>Fuel Tracker</h2>
-
-      <!-- Status badge -->
-      <div class="ft-track-status ${ft.trackingFuel === 'propane' ? 'ft-track-prop' : ft.trackingFuel === 'gas' ? 'ft-track-gas' : 'ft-track-off'}">
-        ${ft.trackingFuel === 'propane' ? '🔥 Tracking: Propane Active'
-          : ft.trackingFuel === 'gas'   ? '⛽ Tracking: Gasoline Active'
-          : '⏸ Not Started'}
-      </div>
-
-      ${ft.trackingFuel && ft.startMs ? `
-        <!-- Active tracking display -->
-        <div class="ft-tracking-active" style="margin-top:12px;">
-          <div class="ft-empty-row"><span>Fuel</span><span>${ft.trackingFuel === 'propane' ? '🔥 Propane' : '⛽ Gasoline'}</span></div>
-          <div class="ft-empty-row"><span>Started</span><span>${fmtTime(ft.startMs)}</span></div>
-          <div class="ft-empty-row"><span>Elapsed</span><span>${fmtElapsed(elapsedMs)}</span></div>
-          <div class="ft-empty-row"><span>Load at start</span><span>${ft.startLoadW != null ? fmtW(ft.startLoadW) : '—'}</span></div>
-          ${loadChangedNote}
-          ${ft.trackingFuel === 'propane' && ft.gasAvailable ? `
-          <p class="ft-reserve-note" style="margin-top:8px;">
-            After propane is depleted, disconnect the LPG regulator hose and restart the generator to run on gasoline.
-          </p>` : ''}
-          <div class="ft-tracking-btns">
-            <button class="tracker-stop-btn" onclick="ftStopTracking()" style="width:auto;margin-top:0;">⏹ Stop Active Tracker</button>
-            <button class="ft-reset-btn" onclick="ftResetTracking()">↺ Reset Fuel Tracker</button>
-          </div>
-        </div>
-      ` : `
-        <!-- Start buttons -->
-        <div class="ft-start-grid">
-          <div class="ft-start-col">
-            <button class="tracker-start-btn tracker-prop-btn tracker-card-start-btn ft-start-full"
-              onclick="${!ft.propaneConnected ? `confirmFtPropane()` : `ftStartPropaneTracker()`}">
-              🔥 Start Propane Tracker
-              <span class="tracker-btn-sub">Use when LPG hose is connected — WEN uses propane first</span>
-            </button>
-            ${!ft.propaneConnected ? `<p class="ft-start-warn">⚠️ Propane is set to Not Connected. Tapping will set it to Connected and start the propane tracker.</p>` : ''}
-          </div>
-          <div class="ft-start-col">
-            <button class="tracker-start-btn tracker-gas-btn tracker-card-start-btn ft-start-full"
-              onclick="${ft.propaneConnected ? `confirmFtGas()` : `ftStartGasTracker()`}">
-              ⛽ Start Gasoline Tracker
-              <span class="tracker-btn-sub">Use only after LPG hose is disconnected or when running gas-only</span>
-            </button>
-            ${ft.propaneConnected ? `<p class="ft-start-warn">⚠️ Propane is Connected. Tapping will set it to Disconnected and start the gasoline tracker. The WEN uses propane first if LPG is connected.</p>` : ''}
-          </div>
-        </div>
-        ${ft.startMs ? `<button class="ft-reset-btn" style="margin-top:10px;" onclick="ftResetTracking()">↺ Clear Previous Session</button>` : ''}
-      `}
-    </div>
   `;
 }
 
@@ -1897,18 +1665,16 @@ function showTab(id) {
     document.getElementById('tab-' + t).classList.toggle('active', t === id);
     document.getElementById('panel-' + t).classList.toggle('active', t === id);
   });
+  // Calculator-only header buttons
+  const calcOnly = id === 'calc';
+  document.querySelector('.header-manage-btn').style.display = calcOnly ? '' : 'none';
+  document.querySelector('.header-collapse-btn').style.display = calcOnly ? '' : 'none';
+
   if (id === 'tests')    renderTests();
-  if (id === 'fuel')     {
-    const { running } = calcLoads();
-    updateFuelDisplay(running);
-    renderFuelTracker();
-    startFuelTickTimer();
-  }
   if (id === 'ftracker') {
     renderFuelTrackerTab();
     startFtTickTimer();
   }
-  if (id !== 'fuel' && id !== 'ftracker') stopFuelTickTimer();
   if (id !== 'ftracker') stopFtTickTimer();
 }
 
@@ -1922,8 +1688,6 @@ window.setElevationPreset = setElevationPreset;
 window.getGpsElevation = getGpsElevation;
 window.setBattery = setBattery;
 window.setChargeStrategy = setChargeStrategy;
-window.startFuelTracker = startFuelTracker;
-window.stopFuelTracker  = stopFuelTracker;
 window.dismissWelcome   = dismissWelcome;
 window.toggleQuickStart = toggleQuickStart;
 window.openHelp         = openHelp;

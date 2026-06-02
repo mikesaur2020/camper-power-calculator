@@ -123,7 +123,6 @@ Token is short-lived — user will provide a fresh one.
 
 ## Known Issues / Rough Edges
 
-- The old Fuel Burn tab still has its own tracker (Start Gas/Propane buttons). This predates the Live Fuel Tracker tab and could be removed or simplified.
 - GPS elevation lookup uses the Open Elevation API (`api.open-elevation.com`) — free, no key, but occasionally slow or down. No fallback.
 - Service worker cache version must be bumped manually in `service-worker.js` when pushing updates that need to bust existing caches (though network-first strategy reduces how often this matters).
 - The `?v=N` query string on `app.js` in `index.html` is a legacy cache-bust remnant — can be cleaned up since network-first SW handles freshness now.
@@ -135,7 +134,6 @@ Token is short-lived — user will provide a fresh one.
 ### High Priority
 1. **Weather-aware overnight confidence** — integrate a weather API (Open-Meteo, free) to get tonight's forecast low temperature. Use the A/C duty cycle table to estimate average load and refine runtime. Answer: "If tonight's low is 72°F and I'm running A/C cooling, will propane last until 7 AM?"
 2. **Fuel tracker refinements** — allow user to input current propane level (not just full 20 lb). A partially-used tank is common.
-3. **Remove or simplify the old Fuel Burn tracker** — the old Start Gas/Propane buttons in Fuel Burn Reference are now superseded by Live Fuel Tracker.
 
 ### Medium Priority
 4. **Elevation-based A/C duty cycle adjustment** — at high elevation, A/C may run longer due to lower air density. Currently the duty cycle table is not elevation-aware.
