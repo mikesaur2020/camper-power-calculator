@@ -4,6 +4,29 @@ Read [PROJECT_VISION.md](PROJECT_VISION.md) first for equipment specs, design de
 
 ---
 
+## Current Project Maturity
+
+**Version 1.0 — Core functionality complete.**
+
+The application has reached a stable, feature-complete state for its primary use case. Core functionality implemented:
+
+- Generator load calculator with Good / Near Limit / Over Limit status
+- Live Fuel Tracker with WEN Auto Fuel Selection modeling
+- Fuel Burn Reference (planning tables)
+- Overnight Confidence (Propane Only + Combined)
+- Camping presets with one-tap apply
+- Elevation derating with GPS lookup
+- Battery Charge State and Solar/Generator charging strategy
+- Real-World Tests tracker
+- Ambient & A/C duty cycle guidance
+- User onboarding (welcome banner, Quick Start, Help modal)
+- Full offline operation via service worker
+- localStorage persistence for all user state
+
+Future work should focus on **usability improvements**, **field validation** (comparing estimates to actual fuel consumption in the field), and targeted enhancements — rather than major new feature areas.
+
+---
+
 ## Current State (as of June 2026)
 
 ### Live at

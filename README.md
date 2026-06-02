@@ -1,65 +1,89 @@
-# Camper Power Calculator
+# Mike's Camper Power Calculator
 
-A static Progressive Web App (PWA) for generator-only camping with the **WEN DF360iX** dual-fuel inverter generator and **2025 Coachmen Apex Ultra-Lite 28RBS**.
+An installable, offline-capable Progressive Web App (PWA) built specifically for boondocking — generator-only camping with no shore power.
 
-## Overview
+Built for:
 
-Replaces an Excel workbook with an installable, offline-capable iPhone-friendly PWA. Calculates generator running load, startup surge, peak load, and fuel/propane status for any combination of RV appliances.
+- **2025 Coachmen Apex Ultra-Lite 28RBS**
+- **WEN DF360iX Dual-Fuel Inverter Generator**
+- **GE 15,000 BTU A/C with Micro-Air EasyStart**
+- **Starlink Mini**
+- **300W Roof Solar System**
+- **Dual SRM24 Flooded Lead-Acid Battery Bank (136Ah at 12V)**
 
-**Primary question this app answers:**
-> "How long can I run the camper on my current fuel setup?"
+The application helps answer:
 
-The **Live Fuel Tracker** tab is the default. It models the WEN DF360iX Auto Fuel Selection system and shows Overnight Confidence, combined runtime, and session tracking.
+- How long will my fuel last at this load?
+- Which fuel source is currently active?
+- Will I make it through the night?
+- Can I safely run this appliance combination?
+- How much generator headroom do I have?
 
-**Tab order:**
-1. Live Fuel Tracker ← default
-2. Calculator
-3. Real-World Tests
-4. Fuel Burn Reference
-5. Ambient & A/C
-6. About
-
-**Key features:**
-- **Live Fuel Tracker** — propane runtime, gasoline reserve runtime, combined runtime, Overnight Confidence
-- **Auto Fuel Selection modeling** — WEN DF360iX propane-first behavior; gasoline shown as reserve (not simultaneously consumed)
-- Calculator with live load summary and gasoline/propane status side-by-side
-- Elevation-aware generator derating (3.5% per 1,000 ft)
-- GPS elevation lookup via browser geolocation + Open Elevation API
-- Real-World Tests tracker (stored in localStorage)
-- Fuel Burn Reference — static burn rate tables by load level
-- A/C duty cycle guidance by outdoor temperature and setpoint
-- Fully offline after first load (service worker caching)
-- Installable from iPhone Safari via Add to Home Screen
+**Live at:** https://mikesaur2020.github.io/camper-power-calculator/
 
 See [PROJECT_VISION.md](PROJECT_VISION.md) for equipment specs and design decisions.
 See [AI_HANDOFF.md](AI_HANDOFF.md) for feature inventory, known issues, and future enhancements.
 
 ---
 
-## Setup
+## Key Features
 
-### Run locally
+| Feature | Description |
+|---|---|
+| ⚡ **Generator Load Calculator** | Live load summary across 16 appliances with Good / Near Limit / Over Limit status for both gasoline and propane |
+| ⛽ **Live Fuel Tracker** | Active fuel source, propane runtime, gasoline reserve runtime, combined potential runtime, and Overnight Confidence |
+| 📚 **Fuel Burn Reference** | Planning tables showing burn rates and runtime estimates at different load levels |
+| 🌙 **Overnight Confidence** | High / Moderate / Low confidence based on estimated runtime vs. a full night |
+| 🏕️ **Camping Presets** | One-tap presets for Normal A/C, Overnight, Microwave, Coffee Time, Hair Dryer — and user-defined custom presets |
+| 📱 **Installable PWA** | Add to Home Screen on iPhone — runs as a standalone app |
+| 💾 **Offline Operation** | Fully functional without internet after first load (service worker caching) |
+| ☀️ **Solar & Battery Awareness** | Battery Charge State and Charging Strategy (Solar Only / Generator Assist) affect generator load estimates |
+| 📍 **Elevation-Aware Planning** | GPS elevation lookup or manual entry; generator output is derated ~3.5% per 1,000 ft |
+| 🔁 **Auto Fuel Selection Modeling** | Accurately reflects the WEN DF360iX propane-priority behavior — gasoline shown as reserve, not simultaneously consumed |
 
-```bash
-cd camper-power-calculator
-python3 -m http.server 8000
-```
+---
 
-Then open: [http://localhost:8000](http://localhost:8000)
+## Recommended Workflow
 
-### Deploy to GitHub Pages
+1. **Open the Calculator tab** and select a preset (Normal A/C, Overnight, etc.)
+2. **Verify appliance selections** — enable or disable individual loads as needed
+3. **Open Live Fuel Tracker** (default tab)
+4. **Check the active fuel source** — Propane or Gasoline
+5. **Review runtime estimates** — propane runtime, gasoline reserve, combined
+6. **Review Overnight Confidence** — High, Moderate, or Low for both propane-only and combined scenarios
+7. **Make fuel decisions** — refuel, adjust load, or plan a manual propane→gasoline transition as needed
 
-1. Push to GitHub (main branch, root of `camper-power-calculator/` folder)
-2. Go to: **GitHub repo → Settings → Pages**
-3. Set source: **Deploy from branch → main → /root**
-4. Public URL: **https://mikesaur2020.github.io/camper-power-calculator/**
+---
 
-### Install on iPhone
+## Design Philosophy
 
-1. Open the public URL in **Safari**
-2. Tap the **Share** button (box with arrow)
-3. Tap **Add to Home Screen**
-4. The app installs as a standalone PWA with its own icon
+This application is intentionally:
+
+- **Camper-specific** — built for one rig, one generator, one use case
+- **Offline-capable** — works without internet after first load
+- **Self-contained** — no backend, no accounts, no cloud sync
+- **Practical** — focused on real camping decisions, not theoretical precision
+
+It does **not** attempt to:
+
+- Replace a generator fuel gauge
+- Predict exact fuel consumption
+- Replace manufacturer specifications or generator monitoring equipment
+
+All runtime estimates are proportional estimates based on WEN/Home Depot published half-load specs. Real consumption varies with temperature, elevation, A/C duty cycle, fuel quality, generator condition, and ECO mode.
+
+---
+
+## Tab Structure
+
+| # | Tab | Purpose |
+|---|---|---|
+| 1 | **Live Fuel Tracker** | Default tab — runtime, fuel source, overnight confidence |
+| 2 | **Calculator** | Appliance load calculator and generator status |
+| 3 | **Real-World Tests** | Track appliance combinations verified in the field |
+| 4 | **Fuel Burn Reference** | Planning tables — burn rates at different load levels |
+| 5 | **Ambient & A/C** | Duty cycle guidance by temperature and setpoint |
+| 6 | **About** | Equipment specs and assumptions |
 
 ---
 
@@ -77,114 +101,13 @@ Per the owner's manual:
 | Propane not connected | ⛽ Gasoline | Active |
 | Neither | — | Generator cannot run |
 
-**Gasoline reserve runtime** (shown when propane is connected) represents how long the gasoline tank would last *after* a manual fuel switch — not how long it's currently running.
-
 **To switch from propane to gasoline:**
 1. Shut down or allow generator to stop when propane is exhausted
 2. Disconnect the LPG regulator hose
 3. Restart the generator
 4. Generator will now run on gasoline
 
-**Combined runtime** = propane runtime + gasoline reserve runtime. Requires the manual 4-step transition above.
-
----
-
-## Live Fuel Tracker vs Fuel Burn Reference
-
-| Tab | Purpose |
-|---|---|
-| **Live Fuel Tracker** | Primary tab. "How long do I have?" Active/reserve fuel, overnight confidence, session tracking |
-| **Fuel Burn Reference** | Static planning tables. Burn rates at different load levels, runtime comparisons |
-
----
-
-## File structure
-
-```
-index.html          Main HTML shell + tab layout
-style.css           All styles (mobile-first dark theme)
-app.js              All logic — appliances, calculations, rendering
-manifest.json       PWA manifest (name, theme color, icons)
-service-worker.js   Offline caching
-icon-192.png        PWA icon (192×192)
-icon-512.png        PWA icon (512×512)
-PROJECT_VISION.md   Equipment specs and design decisions
-AI_HANDOFF.md       Feature inventory, known issues, future enhancements
-README.md           This file
-```
-
----
-
-## Updating appliance watt values
-
-All appliance definitions live at the top of `app.js` in the `APPLIANCES` array:
-
-```js
-const APPLIANCES = [
-  { id: 'ac_cool', name: 'A/C Cooling Mode', ..., running: 1700, surge: 750, ... },
-  { id: 'fridge',  name: '12V Refrigerator', ..., running: 120,  surge: 120, ... },
-  // ...
-];
-```
-
-Edit `running` (watts while on) and `surge` (additional watts at startup) for any appliance, save, and reload. No build process required.
-
-Generator ratings are in the `GEN` object:
-
-```js
-const GEN = {
-  gas:  { running: 2900, peak: 3600 },
-  prop: { running: 2600, peak: 3500 },
-};
-```
-
-Battery charging loads are in `BATTERY_LOAD`:
-
-```js
-const BATTERY_LOAD = { full: 0, partial: 300, heavy: 700 };
-```
-
-Fuel burn reference data (from WEN/Home Depot specs) is in `FUEL`:
-
-```js
-const FUEL = {
-  gas:  { tankGal: 1.5, halfLoadHrs: 5,  halfLoadW: 1450 },
-  prop: { tankLb: 20,   halfLoadHrs: 11, halfLoadW: 1300 },
-};
-```
-
----
-
-## Fuel Tracker Tab — Auto Fuel Selection
-
-The WEN DF360iX uses **Auto Fuel Selection**: propane (LPG) is always prioritized. If a propane tank with enough LPG is connected, the generator runs on propane. It only switches to gasoline when the **LPG regulator hose is manually disconnected** — there is no automatic fuel switchover.
-
-### Fuel Configuration
-- **Propane Connected** (default Yes) — sets active fuel source to Propane
-- **Gasoline Available** (default Yes) — fallback when propane is not connected
-
-### Runtime Calculations
-Runtime estimates use the current live load from the Calculator tab and the published WEN half-load specs as a proportional baseline.
-
-### Combined Potential Runtime
-Shows propane runtime + gasoline runtime. Assumes:
-1. Propane tank depletes first
-2. User **manually disconnects the LPG regulator hose**
-3. Generator then runs on gasoline
-
-The app does not imply automatic fuel switching.
-
-### Overnight Confidence
-| Runtime | Confidence |
-|---|---|
-| ≥ 10 hours | ✅ High |
-| 6–10 hours | ⚠️ Moderate |
-| < 6 hours  | ❌ Low |
-
-Shows expected depletion times for propane, gasoline, and combined.
-
-### Session Tracking
-Tap **Start Tracking** when the generator starts. Tracks elapsed time, starting load, and detects load changes. Persists across page refreshes.
+**Combined runtime** = propane runtime + gasoline reserve runtime — requires the manual 4-step transition above.
 
 ---
 
@@ -202,33 +125,61 @@ Generator output decreases approximately **3.5% per 1,000 ft** above sea level.
 | 9,000 ft | ~32% | 1,986W | 2,466W | 1,781W | 2,398W |
 | 11,000 ft | ~39% | 1,784W | 2,214W | 1,599W | 2,153W |
 
-Derated values are used for all Good/Near Limit/Over Limit status calculations.
-
-### Elevation Sources
-
-**Presets** — tap a preset button (Sea level, Sioux Falls, Denver, 7k–11k ft) to apply instantly.
-
-**GPS (📍 Use My Location)** — taps the browser Geolocation API for your current position, then queries the [Open Elevation API](https://api.open-elevation.com) to convert lat/lon to feet. Requires internet. Only your elevation (in feet) is stored locally — latitude and longitude are never saved.
-
-**🔄 Refresh Location** — appears after a GPS lookup; tap to update elevation at a new campsite.
-
-**Custom entry** — type any value in the Custom Elevation field to override presets and GPS.
-
-**Offline behavior** — GPS lookup requires internet. Presets and manual entry work fully offline.
+**Elevation sources:** Presets, GPS (📍 Use My Location via Open Elevation API — requires internet), or manual entry. GPS stores only the resulting elevation in feet — no lat/lon is saved.
 
 ---
 
-## Source assumptions
+## Setup
 
-- **Generator specs**: [WEN DF360iX product page](https://wenproducts.com/products/wen-df360ix-quiet-and-lightweight-3600-watt-dual-fuel-rv-ready-portable-inverter-generator-with-fuel-shut-off-and-co-watchdog)
-- **Fuel runtime**: [Home Depot listing #330761409](https://www.homedepot.com/p/WEN-Quiet-and-Lightweight-3600-Watt-Dual-Fuel-RV-Ready-Portable-Inverter-Generator-with-Fuel-Shut-Off-and-CO-Watchdog-DF360iX/330761409) — ~5 hrs gasoline at half-load (1.5 gal), ~11 hrs propane at half-load (20 lb)
-- **A/C**: GE 15,000 BTU with Micro-Air EasyStart — EasyStart reduces startup surge only, not running watts (~1,700W)
-- **Solar**: 300W roof panel reduces battery charging demand; not counted as generator output
-- **Batteries**: 2 × SRM24 flooded lead-acid, 68Ah each = 136Ah at 12V in parallel
+### Run locally
+
+```bash
+cd camper-power-calculator
+python3 -m http.server 8000
+```
+
+Then open: [http://localhost:8000](http://localhost:8000)
+
+### Deploy to GitHub Pages
+
+1. Push to GitHub (main branch, root folder)
+2. **GitHub repo → Settings → Pages → Deploy from branch → main → / (root)**
+3. Public URL: **https://mikesaur2020.github.io/camper-power-calculator/**
+
+### Install on iPhone
+
+1. Open the URL in **Safari**
+2. Tap **Share → Add to Home Screen**
+3. App installs as a standalone PWA with its own icon and offline support
 
 ---
 
-## Watt values reference
+## File Structure
+
+```
+index.html          HTML shell — tabs, panels, modals
+style.css           All styles (mobile-first dark theme)
+app.js              All logic, state, calculations, and HTML builders
+manifest.json       PWA manifest
+service-worker.js   Network-first offline caching
+icon-192.png        PWA home screen icon (192×192)
+icon-512.png        PWA home screen icon (512×512)
+PROJECT_VISION.md   Equipment specs and design decisions
+AI_HANDOFF.md       Feature inventory, known issues, future enhancements
+README.md           This file
+```
+
+---
+
+## Updating Watt Values
+
+All appliance definitions are at the top of `app.js` in the `APPLIANCES` array. Edit `running` (watts while on) and `surge` (additional watts at startup), save, and reload. No build process required.
+
+Generator ratings are in `GEN`. Fuel burn specs are in `FUEL`. Battery charging loads are in `BATTERY_LOAD`.
+
+---
+
+## Watt Values Reference
 
 | Appliance | Running W | Startup Surge W |
 |---|---|---|
@@ -251,4 +202,14 @@ Derated values are used for all Good/Near Limit/Over Limit status calculations.
 
 ---
 
-*This app provides estimates only. Real-world generator output and fuel consumption vary with temperature, elevation, load profile, fuel quality, and generator condition.*
+## Source Assumptions
+
+- **Generator specs**: [WEN DF360iX product page](https://wenproducts.com/products/wen-df360ix-quiet-and-lightweight-3600-watt-dual-fuel-rv-ready-portable-inverter-generator-with-fuel-shut-off-and-co-watchdog)
+- **Fuel runtime**: [Home Depot listing #330761409](https://www.homedepot.com/p/WEN-Quiet-and-Lightweight-3600-Watt-Dual-Fuel-RV-Ready-Portable-Inverter-Generator-with-Fuel-Shut-Off-and-CO-Watchdog-DF360iX/330761409) — ~5 hrs gasoline at half-load (1.5 gal), ~11 hrs propane at half-load (20 lb)
+- **A/C**: GE 15,000 BTU with Micro-Air EasyStart — EasyStart reduces startup surge only, not running watts (~1,700W)
+- **Solar**: 300W roof panel reduces battery charging demand; not counted as generator output
+- **Batteries**: 2 × SRM24 flooded lead-acid, 68Ah each = 136Ah at 12V in parallel
+
+---
+
+*All estimates are approximate. Real-world generator output and fuel consumption vary with temperature, elevation, A/C duty cycle, fuel quality, and generator condition. This application is a planning aid — not a substitute for monitoring your generator directly.*

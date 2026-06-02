@@ -1255,7 +1255,7 @@ function buildAboutHTML() {
       </div>
     </div>
 
-    <div class="version">Mike's Camper Power Calculator · Built for WEN DF360iX + Coachmen Apex 28RBS<br>Primary tab: Live Fuel Tracker — answers "How long can I run on my current fuel?"</div>
+    <div class="version">Mike's Camper Power Calculator · RV Energy Management &amp; Generator Runtime Planning<br>Built for WEN DF360iX + Coachmen Apex 28RBS · Offline-capable PWA</div>
   `;
 }
 

@@ -1,5 +1,23 @@
 # Project Vision — Mike's Camper Power Calculator
 
+## Project Positioning
+
+**An RV energy management and generator runtime planning application** built for one specific rig, one specific generator, and one specific camping style — boondocking with no shore power.
+
+This is not a generic RV power calculator. It is a purpose-built tool that models the exact behavior of the WEN DF360iX Auto Fuel Selection system, the specific load profile of the 2025 Coachmen Apex 28RBS, and the real-world decisions a boondocker makes during a camping trip.
+
+---
+
+## Primary Questions the App Answers
+
+1. **Can I safely run this appliance combination?** — Generator Load Calculator with Good / Near Limit / Over Limit status
+2. **How much generator capacity remains?** — Running headroom and peak headroom for both fuels, derated for elevation
+3. **Which fuel source is active?** — Live Fuel Tracker with WEN Auto Fuel Selection modeling
+4. **How long will fuel last?** — Propane runtime, gasoline reserve runtime, combined potential runtime
+5. **Will I likely make it through the night?** — Overnight Confidence (High / Moderate / Low) for propane-only and combined scenarios
+
+---
+
 ## Purpose
 
 A purpose-built generator management tool for boondocking (generator-only camping) with no shore power. The app answers the primary question:
