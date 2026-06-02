@@ -242,7 +242,10 @@ function buildCalculatorHTML() {
 
   return `
     <div class="strategy-note">
-      <h2>Recommended Operating Strategy</h2>
+      <div class="strategy-header">
+        <h2>Recommended Operating Strategy</h2>
+        <button class="collapse-all-btn" onclick="collapseAll()">Collapse All</button>
+      </div>
       <p><strong>Normal mode:</strong> A/C Cooling + Refrigerator + Starlink + USB + TV</p>
       <p><strong>Temporary high-load mode:</strong> Switch A/C to Fan Only before running microwave, toaster, coffee maker, hair dryer, or clothes iron.</p>
     </div>
@@ -409,6 +412,17 @@ function setElevationPreset(ft) {
   syncPresetButtons(ft);
   saveState();
   renderCalculator();
+}
+
+function collapseAll() {
+  ['summary-detail', 'always-body', 'highload-body', 'other-body'].forEach(id => {
+    const body = document.getElementById(id);
+    if (!body) return;
+    body.style.display = 'none';
+    const heading = body.previousElementSibling;
+    const icon = heading && heading.querySelector('.collapse-icon');
+    if (icon) icon.textContent = '▸';
+  });
 }
 
 function toggleSection(bodyId, heading) {
@@ -761,6 +775,7 @@ function showTab(id) {
 // ── Boot ──────────────────────────────────────────────────────────────────────
 window.toggleAppliance = toggleAppliance;
 window.toggleSection = toggleSection;
+window.collapseAll = collapseAll;
 window.setElevation = setElevation;
 window.setElevationPreset = setElevationPreset;
 window.setBattery = setBattery;

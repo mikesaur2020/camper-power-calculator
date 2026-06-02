@@ -370,6 +370,26 @@ nav button.active {
   padding: 12px;
   margin-bottom: 12px;
 }
+.strategy-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+.strategy-header h2 { margin-bottom: 0; }
+.collapse-all-btn {
+  background: rgba(16,185,129,0.12);
+  border: 1px solid rgba(16,185,129,0.35);
+  border-radius: 6px;
+  color: var(--accent2);
+  cursor: pointer;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 4px 10px;
+  white-space: nowrap;
+}
+.collapse-all-btn:hover { background: rgba(16,185,129,0.22); }
+
 .strategy-note h2 {
   font-size: 0.75rem;
   font-weight: 700;
