@@ -409,7 +409,7 @@ function buildCalculatorHTML() {
     <!-- Battery State -->
     <div class="card collapsible-card">
       <h2 class="collapsible-heading" onclick="toggleSection('batt-body', this)">
-        <span>Battery State</span>
+        <span>Battery Charge State</span>
         <span class="section-watts" id="summary-batt"></span>
         <span class="collapse-icon">▸</span>
       </h2>
@@ -434,7 +434,7 @@ function buildCalculatorHTML() {
     <!-- Always-on -->
     <div class="card collapsible-card">
       <h2 class="collapsible-heading" onclick="toggleSection('always-body', this)">
-        <span>Always-On Group</span>
+        <span>Always On Loads</span>
         <span class="section-watts" id="watts-always"></span>
         <span class="collapse-icon">▸</span>
       </h2>
@@ -451,7 +451,7 @@ function buildCalculatorHTML() {
     <!-- High-load -->
     <div class="card collapsible-card">
       <h2 class="collapsible-heading" onclick="toggleSection('highload-body', this)">
-        <span>Temporary High-Load</span>
+        <span>Temporary High Loads</span>
         <span class="section-watts" id="watts-highload"></span>
         <span class="collapse-icon">▸</span>
       </h2>
