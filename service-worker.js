@@ -1,4 +1,4 @@
-const CACHE_NAME = 'camper-power-v16';
+const CACHE_NAME = 'camper-power-v17';
 const ASSETS = [
   './',
   './index.html',
@@ -21,8 +21,16 @@ self.addEventListener('activate', e => {
   self.clients.claim();
 });
 
+// Network-first: always try to fetch fresh content, update cache, fall back
+// to cache only when offline. No more needing cache-busting query strings.
 self.addEventListener('fetch', e => {
   e.respondWith(
-    caches.match(e.request).then(cached => cached || fetch(e.request))
+    fetch(e.request)
+      .then(response => {
+        const clone = response.clone();
+        caches.open(CACHE_NAME).then(c => c.put(e.request, clone));
+        return response;
+      })
+      .catch(() => caches.match(e.request))
   );
 });
