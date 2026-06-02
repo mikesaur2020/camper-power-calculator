@@ -99,7 +99,7 @@ const state = {
   tests: [],
   userPresets: [],
   hiddenBuiltIns: [],   // IDs of built-in presets the user has hidden
-  activePresetId: null, // last applied preset, for combination row
+  activePresetId: 'normal-ac',
 };
 
 // ── Persistence ───────────────────────────────────────────────────────────────
