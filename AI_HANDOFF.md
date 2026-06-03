@@ -40,11 +40,17 @@ Static PWA — HTML + CSS + vanilla JS. No build process. Deploys from GitHub Pa
 
 ### Pushing to GitHub
 ```bash
-git remote set-url origin https://TOKEN@github.com/mikesaur2020/camper-power-calculator.git
 git push origin main
-git remote set-url origin https://github.com/mikesaur2020/camper-power-calculator.git
 ```
-Token is short-lived — user will provide a fresh one.
+macOS Keychain stores the GitHub PAT via `credential.helper osxkeychain` — no token handling required. If a push fails with auth errors, the token may have expired; generate a new PAT on GitHub (Settings → Developer Settings → Personal Access Tokens → repo scope) and re-store it:
+```bash
+git credential-osxkeychain store <<EOF
+protocol=https
+host=github.com
+username=mikesaur2020
+password=YOUR_NEW_TOKEN
+EOF
+```
 
 ---
 
