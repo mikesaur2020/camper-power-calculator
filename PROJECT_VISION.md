@@ -62,15 +62,19 @@ Fuel burn specs (WEN / Home Depot):
 The generator runs primarily for A/C comfort. The app is designed around near-continuous generator use while boondocking, not occasional supplemental use.
 
 ### Auto Fuel Selection (WEN DF360iX)
-The WEN DF360iX uses **Auto Fuel Selection**. Per the owner's manual:
+The WEN DF360iX uses **Auto Fuel Selection**. Behavior confirmed by WEN Technical Support:
 
-> "LPG is prioritized; this means that if a propane tank with enough LPG is connected, the generator will automatically use LPG. If no propane tank is connected, the generator will use gasoline. The LPG regulator hose must be disconnected for the generator to switch to gasoline. If the LPG regulator hose is connected and you run out of LPG, the generator will not automatically switch to gasoline."
+- **LPG hose connected:** Propane is the active fuel. Gasoline is not consumed.
+- **LPG hose disconnected at start:** Generator starts and runs on gasoline.
+- **Propane runs out (hose connected):** Generator shuts down. It does NOT auto-switch to gasoline. User must disconnect the LPG hose and restart.
+- **Running on gasoline + connect propane hose:** Generator automatically switches to propane. Propane becomes the active fuel.
 
 Key implications for this app:
 - **Propane is the active fuel** when connected. Gasoline is not consumed.
 - **Gasoline is reserve fuel** — available only after manual LPG hose disconnect.
-- **No automatic switchover.** If propane runs out with the hose connected, the generator stops.
-- **Combined runtime** assumes: propane depleted → generator stops → user disconnects LPG hose → generator restarts on gasoline. This is a manual multi-step process.
+- **No automatic propane→gasoline failover.** If propane runs out with the hose connected, the generator stops.
+- **Automatic gasoline→propane switch.** If propane is connected while running on gasoline, the generator switches to propane automatically.
+- **Combined runtime** assumes: propane depleted → generator stops → user disconnects LPG hose → generator restarts on gasoline. This is a manual 3-step process.
 - The app shows gasoline as RESERVE (not as actively depleting) while propane is connected. Gasoline burn rate is not displayed in reserve mode to avoid implying it is being consumed.
 
 ### Starlink Always On

@@ -1017,8 +1017,10 @@ function buildAboutHTML() {
       <div class="about-section">
         <h3>WEN DF360iX Auto Fuel Selection</h3>
         <p style="font-size:0.75rem;color:var(--text-muted);line-height:1.6;">
-          Propane is prioritized when the LPG hose is connected; gasoline is reserve and is not consumed until you manually disconnect the hose and restart. The generator will not auto-switch fuels.
-          Full switchover steps are on the <strong>Live Fuel Tracker</strong> tab under Fuel Configuration.
+          Propane is always the active fuel when the LPG hose is connected. Gasoline is reserve and not consumed while propane is connected.<br><br>
+          <strong>Propane runs out with hose connected:</strong> Generator shuts down — it will not auto-switch to gasoline. To continue: disconnect the LPG hose, then restart the generator.<br><br>
+          <strong>Running on gasoline + connect propane hose:</strong> Generator automatically switches to propane.<br><br>
+          Full switchover steps are on the <strong>Live Fuel Tracker</strong> tab. <em>Confirmed by WEN Technical Support.</em>
         </p>
       </div>
     </div>
@@ -1348,9 +1350,9 @@ function buildWhatAmICard() {
         <dt>Active Fuel Source</dt>
         <dd>The fuel the generator is currently consuming. When propane is connected it is always active.</dd>
         <dt>Reserve Fuel</dt>
-        <dd>Gasoline — available only after you manually disconnect the LPG hose. It is not being consumed while propane is connected.</dd>
+        <dd>Gasoline — available only after the LPG hose is disconnected. Not being consumed while propane is connected. Connecting a propane hose while running on gasoline switches the generator to propane automatically.</dd>
         <dt>Combined Runtime</dt>
-        <dd>Maximum potential runtime if you use propane first, then manually switch to gasoline. Requires a manual 4-step transition — the generator will not switch automatically.</dd>
+        <dd>Maximum potential runtime: propane first, then gasoline after a manual restart. When propane runs out, the generator stops — disconnect the LPG hose and restart on gasoline. The generator will not switch fuels automatically.</dd>
         <dt>Overnight Confidence</dt>
         <dd>An estimate of whether fuel will last through the night. High ✅ = 10+ hrs, Moderate ⚠️ = 6–10 hrs, Low ❌ = under 6 hrs.</dd>
         <dt>Propane Only vs Combined</dt>
@@ -1391,11 +1393,11 @@ function ftComboGuidance(propane, gas) {
     </div>
     <ul class="ft-combo-list">
       <li>🔥 <strong>Active fuel: Propane.</strong> Gasoline is not consumed while propane is connected.</li>
-      <li class="ft-combo-steps-label">To switch to gasoline after propane is depleted:</li>
-      <li class="ft-combo-step">1. Shut down or allow generator to stop when propane is exhausted.</li>
-      <li class="ft-combo-step">2. Disconnect the LPG regulator hose from the propane tank.</li>
-      <li class="ft-combo-step">3. Restart the generator.</li>
-      <li class="ft-combo-step">4. Generator will now run on gasoline.</li>
+      <li>🛑 <strong>No auto-switch:</strong> If propane runs out, the generator shuts down — it will not switch to gasoline automatically.</li>
+      <li class="ft-combo-steps-label">To continue on gasoline after propane is depleted:</li>
+      <li class="ft-combo-step">1. Generator stops when propane is exhausted.</li>
+      <li class="ft-combo-step">2. Disconnect the LPG regulator hose.</li>
+      <li class="ft-combo-step">3. Restart the generator — it will now run on gasoline.</li>
     </ul>`;
   if (propane && !gas) return `
     <div class="ft-combo-header ft-combo-prop">
@@ -1404,6 +1406,7 @@ function ftComboGuidance(propane, gas) {
     </div>
     <ul class="ft-combo-list">
       <li>🔥 <strong>Active fuel: Propane.</strong> Generator runs entirely on LPG.</li>
+      <li>🛑 If propane is exhausted, the generator <strong>shuts down</strong> — it will not auto-switch to gasoline.</li>
       <li>📦 Runtime is limited to your propane tank. No gasoline reserve available.</li>
       <li>💡 If gasoline is available in the tank, toggle "Gasoline Available" above to see combined runtime potential.</li>
     </ul>`;
@@ -1415,7 +1418,8 @@ function ftComboGuidance(propane, gas) {
     <ul class="ft-combo-list">
       <li>⛽ <strong>Active fuel: Gasoline.</strong> No propane is connected, so the generator uses the gasoline tank.</li>
       <li>📦 Runtime is limited to the gasoline tank (1.5 gal). No propane reserve.</li>
-      <li>💡 To switch to propane-first operation, connect the propane tank and LPG hose, then set Propane Connected = Yes above.</li>
+      <li>⚠️ <strong>Auto-switch to propane:</strong> If a propane hose is connected while the generator is running on gasoline, the generator will automatically switch to propane.</li>
+      <li>💡 To run on propane, connect the LPG hose and set Propane Connected = Yes above — the generator will switch automatically.</li>
     </ul>`;
   return `
     <div class="ft-combo-header ft-combo-none">
@@ -1434,7 +1438,7 @@ function buildFuelTrackerHTML() {
 function calcNudge(running) {
   const preset = getAllPresets().find(p => p.id === state.activePresetId);
   const label = preset ? preset.name : 'Custom';
-  return `<p class="ft-calc-nudge">Showing load from Calculator: <strong>${label}</strong> — ${fmtW(running)}. <a class="ft-calc-link" onclick="showTab('calc')">Adjust appliances</a> to refine these estimates.</p>`;
+  return `<p class="ft-calc-nudge">Showing load from Calculator: <strong>${escHtml(label)}</strong> — ${fmtW(running)}. <a class="ft-calc-link" onclick="showTab('calc')">Adjust appliances</a> to refine these estimates.</p>`;
 }
 
 function renderFuelTrackerTab() {
@@ -1509,7 +1513,11 @@ function renderFuelTrackerTab() {
           ${loadChangedNote}
           ${ft.trackingFuel === 'propane' && ft.gasAvailable ? `
           <p class="ft-reserve-note" style="margin-top:8px;">
-            After propane is depleted, disconnect the LPG regulator hose and restart the generator to run on gasoline.
+            When propane is depleted, the generator shuts down — it will not switch to gasoline automatically. Disconnect the LPG hose and restart to continue on gasoline.
+          </p>` : ''}
+          ${ft.trackingFuel === 'gas' ? `
+          <p class="ft-reserve-note" style="margin-top:8px;">
+            ⚠️ Gasoline remains active only while the propane hose is disconnected. Connecting a propane hose while the generator is running will automatically switch it to propane.
           </p>` : ''}
           <div class="ft-tracking-btns">
             <button class="tracker-stop-btn" onclick="ftStopTracking()" style="width:auto;margin-top:0;">⏹ Stop Active Tracker</button>
@@ -1546,7 +1554,7 @@ function renderFuelTrackerTab() {
     <div class="card">
       <h2>Fuel Configuration</h2>
       <p class="ft-sub" style="margin-bottom:10px;">
-        Propane is always active when the LPG hose is connected. Gasoline is reserve — see the switchover steps below.
+        Propane is always active when the LPG hose is connected. Gasoline is reserve and is not consumed while propane is connected. Connecting a propane hose while running on gasoline will automatically switch the generator to propane.
       </p>
       <div class="ft-config-grid">
         <div class="ft-config-item">
@@ -1606,7 +1614,7 @@ function renderFuelTrackerTab() {
               <div class="ft-runtime-sub">Reserve runtime · 1.5 gal tank</div>
               <div class="ft-empty-row"><span>Usable after propane at</span><span>${fmtTime(gasStartMs)}</span></div>
               <div class="ft-empty-row"><span>Est. gas empty at</span><span>${fmtTime(gasCombinedEmptyMs)}</span></div>
-              <p class="ft-reserve-note">⚠️ Not being consumed now. Generator will NOT auto-switch — LPG hose must be manually disconnected first.</p>`;
+              <p class="ft-reserve-note">⚠️ Not being consumed now. When propane runs out, the generator shuts down — it will NOT auto-switch to gasoline. Disconnect the LPG hose and restart to use gasoline.</p>`;
           } else {
             return `
               <div class="ft-runtime-val ${gasHrs >= 10 ? 'ft-green' : gasHrs >= 6 ? 'ft-yellow' : 'ft-red'}">${fmt(gasHrs)} hrs</div>
@@ -1624,7 +1632,7 @@ function renderFuelTrackerTab() {
       <div class="ft-combined-val ${combinedHrs >= 10 ? 'ft-green' : combinedHrs >= 6 ? 'ft-yellow' : 'ft-red'}">${fmt(combinedHrs)} hrs</div>
       <div class="ft-empty-row" style="margin-top:6px;"><span>Est. combined empty time</span><span>${ftEmptyTime(nowMs, combinedHrs)}</span></div>
       <p class="ft-sub" style="margin-top:8px;">
-        Propane first, then manual switch to gasoline — see switchover steps above.
+        Propane depleted → generator stops → disconnect LPG hose → restart on gasoline. Combined runtime requires this manual 3-step process — the generator will not switch fuels automatically.
       </p>
     </div>
     ` : ''}

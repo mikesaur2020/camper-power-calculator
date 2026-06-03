@@ -6,7 +6,7 @@ Read [PROJECT_VISION.md](PROJECT_VISION.md) first for equipment specs, design de
 
 ## Current Project Maturity
 
-**Version 1.0 — Core functionality complete.**
+**Version 1.0.1 — WEN fuel behavior update (June 2026).**
 
 The application has reached a stable, feature-complete state for its primary use case. Core functionality implemented:
 
@@ -90,10 +90,11 @@ Token is short-lived — user will provide a fresh one.
 - Fuel Combination Guidance card: active/reserve explanation + numbered 4-step manual switchover procedure
 - Session tracking: start/stop/reset, load change detection, localStorage persist
 
-**Auto Fuel Selection modeling (source: WEN DF360iX owner's manual):**
+**Auto Fuel Selection modeling (confirmed by WEN Technical Support — v1.0.1):**
 - Propane connected → propane is active, gasoline is NOT consumed
-- Propane exhausted with hose connected → generator STOPS (no auto-switch)
-- Manual transition: stop → disconnect LPG hose → restart → gasoline active
+- Propane exhausted with hose connected → generator STOPS (no auto-switch to gasoline)
+- Manual restart on gasoline: generator stops → disconnect LPG hose → restart → gasoline active (3 steps)
+- Running on gasoline + connect propane hose → generator automatically switches to propane
 - App never shows gasoline as depleting while propane is connected
 
 ### Calculator

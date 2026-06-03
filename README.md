@@ -51,7 +51,7 @@ See [AI_HANDOFF.md](AI_HANDOFF.md) for feature inventory, known issues, and futu
 4. **Check the active fuel source** — Propane or Gasoline
 5. **Review runtime estimates** — propane runtime, gasoline reserve, combined
 6. **Review Overnight Confidence** — High, Moderate, or Low for both propane-only and combined scenarios
-7. **Make fuel decisions** — refuel, adjust load, or plan a manual propane→gasoline transition as needed
+7. **Make fuel decisions** — refuel, adjust load, or plan a manual propane→gasoline restart as needed (generator stops when propane runs out; disconnect LPG hose, then restart)
 
 ---
 
@@ -89,25 +89,21 @@ All runtime estimates are proportional estimates based on WEN/Home Depot publish
 
 ## WEN DF360iX Auto Fuel Selection
 
-Per the owner's manual:
+Confirmed by WEN Technical Support:
 
-> "LPG is prioritized. If a propane tank with enough LPG is connected, the generator will automatically use LPG. The LPG regulator hose must be disconnected for the generator to switch to gasoline. If the LPG regulator hose is connected and you run out of LPG, the generator will not automatically switch to gasoline."
+| Scenario | Result |
+|---|---|
+| LPG hose connected | Generator uses propane. Gasoline is not consumed. |
+| LPG hose disconnected at start | Generator starts and runs on gasoline. |
+| Propane runs out (hose connected) | Generator **shuts down** — does not auto-switch to gasoline. |
+| Running on gasoline + connect propane hose | Generator **automatically switches to propane**. |
 
-**What this means in the app:**
+**To switch from propane to gasoline after propane is depleted:**
+1. Generator stops when propane is exhausted.
+2. Disconnect the LPG regulator hose.
+3. Restart the generator — it will now run on gasoline.
 
-| Scenario | Active Fuel | Gasoline |
-|---|---|---|
-| Propane connected | 🔥 Propane | Reserve only — not consumed |
-| Propane not connected | ⛽ Gasoline | Active |
-| Neither | — | Generator cannot run |
-
-**To switch from propane to gasoline:**
-1. Shut down or allow generator to stop when propane is exhausted
-2. Disconnect the LPG regulator hose
-3. Restart the generator
-4. Generator will now run on gasoline
-
-**Combined runtime** = propane runtime + gasoline reserve runtime — requires the manual 4-step transition above.
+**Combined runtime** = propane runtime + gasoline reserve runtime — requires the manual 3-step restart process above. The generator will not switch fuels automatically.
 
 ---
 
