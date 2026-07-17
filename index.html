@@ -15,7 +15,7 @@
   <link rel="icon" href="favicon.svg" type="image/svg+xml">
   <link rel="icon" href="favicon-32.png" sizes="32x32" type="image/png">
   <link rel="apple-touch-icon" href="apple-touch-icon.png">
-  <link rel="stylesheet" href="style.css?v=gpa5">
+  <link rel="stylesheet" href="style.css?v=gpa6">
   <script>
     // Apply saved / system theme before paint to avoid a flash.
     (function () {
@@ -50,19 +50,19 @@
     </div>
   </header>
 
-  <nav>
-    <button id="tab-ftracker" class="active" onclick="showTab('ftracker')">Live Fuel Tracker</button>
-    <button id="tab-calc"    onclick="showTab('calc')">Calculator</button>
-    <button id="tab-shore"   onclick="showTab('shore')">30A Shore Power</button>
-    <button id="tab-tests"   onclick="showTab('tests')">Real-World Tests</button>
-    <button id="tab-fuel"    onclick="showTab('fuel')">Reference</button>
-    <button id="tab-ambient" onclick="showTab('ambient')">Ambient &amp; A/C</button>
-    <button id="tab-about"   onclick="showTab('about')">About</button>
+  <nav aria-label="Sections">
+    <button id="tab-calc"    class="active" onclick="showTab('calc')"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h9M17.5 8H20M4 16h2.5M11 16h9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="15.5" cy="8" r="2.4" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="8.5" cy="16" r="2.4" fill="none" stroke="currentColor" stroke-width="2"/></svg>Calculator</button>
+    <button id="tab-ftracker" onclick="showTab('ftracker')"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="13.5" r="7.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 9.5v4.2l2.6 1.6M9.5 3h5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>Fuel Tracker</button>
+    <button id="tab-shore"   onclick="showTab('shore')"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 3v5M15 3v5M6.5 8h11v2.5a5.5 5.5 0 01-11 0zM12 16v5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>Shore Power</button>
+    <button id="tab-tests"   onclick="showTab('tests')"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="4.5" width="12" height="16" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M9.5 4.5a2.5 2.5 0 015 0" fill="none" stroke="currentColor" stroke-width="2"/><path d="M9 13l2 2 4-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>Real-World Tests</button>
+    <button id="tab-fuel"    onclick="showTab('fuel')"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M5.5 4.5H16a2 2 0 012 2v13H7.5a2 2 0 01-2-2z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M5.5 17.5H18" fill="none" stroke="currentColor" stroke-width="2"/></svg>Reference</button>
+    <button id="tab-ambient" onclick="showTab('ambient')"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 13.5V6a2 2 0 10-4 0v7.5a4 4 0 104 0z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>Ambient &amp; A/C</button>
+    <button id="tab-about"   onclick="showTab('about')"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 11v5M12 7.8v.01" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>About</button>
   </nav>
 
   <main>
-    <div id="panel-ftracker" class="tab-panel active"></div>
-    <div id="panel-calc"    class="tab-panel"></div>
+    <div id="panel-ftracker" class="tab-panel"></div>
+    <div id="panel-calc"    class="tab-panel active"></div>
     <div id="panel-shore"   class="tab-panel"></div>
 
     <div id="panel-tests"   class="tab-panel">
@@ -160,6 +160,6 @@
     </div>
   </div>
 
-  <script src="app.js?v=gpa5"></script>
+  <script src="app.js?v=gpa6"></script>
 </body>
 </html>

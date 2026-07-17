@@ -1,5 +1,31 @@
 'use strict';
 
+// ── Inline SVG icon system ────────────────────────────────────────────────────
+// One restrained, monoline set (currentColor) so indicators look identical on iOS,
+// Android, desktop, and installed PWAs — no platform emoji. Use ic('name').
+const ICONS = {
+  check:    '<path d="M20 6.5L9.5 17 4 11.5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>',
+  alert:    '<path d="M12 3.5l8.5 15h-17z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M12 9.5v4.2M12 17.2v.01" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
+  ban:      '<circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M6.5 6.5l11 11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
+  bolt:     '<path d="M13 2L4.5 13.5H10l-1 8.5 8.5-12H12z" fill="currentColor"/>',
+  gas:      '<path d="M12 3.2s5.8 6 5.8 10.3a5.8 5.8 0 11-11.6 0C6.2 9.2 12 3.2 12 3.2z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>',
+  propane:  '<path d="M12.5 2.5c.4 3.4 3.7 4.6 3.7 8.2a4.2 4.2 0 11-8.4 0c0-1.6.7-2.7 1.7-3.6.1 1.5.8 2.3 1.6 2.3.7 0 1.1-.6 1.1-1.7 0-2 .3-3.6.3-5.2z" fill="currentColor"/>',
+  mountain: '<path d="M3 19.5l6-11 3.5 5.5 2-3 6.5 8.5z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>',
+  gauge:    '<path d="M4 18.5a8 8 0 1116 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M12 18.5l4.2-5.2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
+  sliders:  '<path d="M4 8h9M17.5 8H20M4 16h2.5M11 16h9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="15.5" cy="8" r="2.4" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="8.5" cy="16" r="2.4" fill="none" stroke="currentColor" stroke-width="2"/>',
+  plug:     '<path d="M9 3v5M15 3v5M6.5 8h11v2.5a5.5 5.5 0 01-11 0zM12 16v5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
+  clipboard:'<rect x="6" y="4.5" width="12" height="16" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M9.5 4.5a2.5 2.5 0 015 0" fill="none" stroke="currentColor" stroke-width="2"/><path d="M9 13l2 2 4-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
+  book:     '<path d="M5.5 4.5H16a2 2 0 012 2v13H7.5a2 2 0 01-2-2z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M5.5 17.5H18" fill="none" stroke="currentColor" stroke-width="2"/>',
+  thermo:   '<path d="M14 13.5V6a2 2 0 10-4 0v7.5a4 4 0 104 0z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>',
+  info:     '<circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 11v5M12 7.8v.01" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
+  timer:    '<circle cx="12" cy="13.5" r="7.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 9.5v4.2l2.6 1.6M9.5 3h5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
+  arrow:    '<path d="M5 12h13M13 6.5l5.5 5.5-5.5 5.5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>',
+  wifiOff:  '<path d="M3 4l18 18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M8 12.5a7 7 0 018-1M5 9.5a11 11 0 0110-2.3M12 18.5v.01" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
+};
+function ic(name, cls) {
+  return `<svg class="ic${cls ? ' ' + cls : ''}" viewBox="0 0 24 24" aria-hidden="true" focusable="false">${ICONS[name] || ''}</svg>`;
+}
+
 // ── Appliance definitions ─────────────────────────────────────────────────────
 // To update watt values, edit running/surge below and reload the page.
 const APPLIANCES = [
@@ -559,9 +585,9 @@ function populateVerdict(running, peak, maxSurge, derated, gas, prop) {
   card.className = 'card verdict-card ' + cls;
 
   const pill = document.getElementById('verdict-pill');
-  pill.innerHTML = lim.status === 'good' ? '<span aria-hidden="true">✅</span> Safe'
-                 : lim.status === 'near' ? '<span aria-hidden="true">⚠️</span> Near Capacity'
-                 : '<span aria-hidden="true">⛔</span> Unsafe';
+  pill.innerHTML = lim.status === 'good' ? ic('check') + ' Safe'
+                 : lim.status === 'near' ? ic('alert') + ' Near Capacity'
+                 : ic('ban') + ' Unsafe';
   pill.className = 'verdict-pill ' + cls;
 
   // Real-world evidence for the current combination (raises confidence to Confirmed).
@@ -575,7 +601,7 @@ function populateVerdict(running, peak, maxSurge, derated, gas, prop) {
   const confEl = document.getElementById('verdict-conf');
   confEl.className = 'verdict-conf ' + conf.cls;
   confEl.innerHTML = ev.confirmedLim
-    ? '<span aria-hidden="true">✓</span> Confirmed'
+    ? ic('check') + ' Confirmed'
     : conf.level + ' confidence';
 
   document.getElementById('verdict-fuel').innerHTML =
@@ -621,13 +647,13 @@ function populateVerdict(running, peak, maxSurge, derated, gas, prop) {
   const surgeChip = document.getElementById('vchip-surge');
   const surgeOk = lim.peakHead >= 0;
   surgeChip.className = 'vchip ' + (surgeOk ? 'v-good' : 'v-over');
-  surgeChip.innerHTML = `Startup surge <b>${surgeOk ? 'fits' : 'over'}</b> · est. peak ${peak.toLocaleString()}W`;
+  surgeChip.innerHTML = `${ic('bolt')} Startup surge <b>${surgeOk ? 'fits' : 'over'}</b> · est. peak ${peak.toLocaleString()}W`;
 
   const derChip = document.getElementById('vchip-derate');
   derChip.className = 'vchip';
   derChip.innerHTML = state.elevation > 0
-    ? `Elevation <b>${state.elevation.toLocaleString()} ft</b> · −${deratePct}% est.`
-    : `Elevation <b>sea level</b> · no derate`;
+    ? `${ic('mountain')} Elevation <b>${state.elevation.toLocaleString()} ft</b> · −${deratePct}% est.`
+    : `${ic('mountain')} Elevation <b>sea level</b> · no derate`;
 
   // Real-world evidence row (confirm / log that this combination actually ran).
   renderVerdictEvidence(ev, limName);
@@ -658,7 +684,7 @@ function renderVerdictEvidence(ev, limName) {
   const gasOnly = !genHasPropane();
   if (ev.confirmedLim) {
     el.className = 'verdict-evidence ev-confirmed';
-    el.innerHTML = `<span class="ev-icon" aria-hidden="true">✓</span>
+    el.innerHTML = `<span class="ev-icon" aria-hidden="true">${ic('check')}</span>
       <span>You've run this combination on <strong>${limName}</strong> — logged in Real-World Tests.</span>`;
     return;
   }
@@ -729,7 +755,8 @@ function verdictAction(lim, gas, prop, running, peak, limName) {
   }
   // Surge-limited (running fits, peak doesn't) → stagger motor starts.
   if (lim.peakHead < 0 && lim.runHead >= 0) {
-    return { text: `Start large motors one at a time, and let the A/C compressor finish starting before adding another load.` };
+    const over = Math.abs(lim.peakHead).toLocaleString();
+    return { text: `Start heavy loads one at a time. Wait about <strong>20 seconds</strong> for the A/C compressor to finish starting before adding another load — the surge is about <strong>${over}W</strong> over peak.` };
   }
   // Running over on a dual-fuel unit where gasoline has room → suggest the fuel swap.
   if (lim.status === 'over' && hasProp && gas.runHead >= 0) {
@@ -803,14 +830,14 @@ function logCombo(fuel) {
 // ── Generator selection ───────────────────────────────────────────────────────
 function fuelBadgesHTML(g) {
   return g.fuels.map(f => f === 'gas'
-    ? '<span class="gen-fuel-badge gen-fuel-gas">⛽ Gas</span>'
-    : '<span class="gen-fuel-badge gen-fuel-prop">🔵 Propane</span>').join('');
+    ? `<span class="gen-fuel-badge gen-fuel-gas">${ic('gas')} Gas</span>`
+    : `<span class="gen-fuel-badge gen-fuel-prop">${ic('propane')} Propane</span>`).join('');
 }
 
 function buildGeneratorCard() {
   const g = currentGen();
-  const ratings = `⛽ ${g.gas.running.toLocaleString()}W · ${g.gas.peak.toLocaleString()}W peak`
-    + (g.prop ? ` &nbsp;·&nbsp; 🔵 ${g.prop.running.toLocaleString()}W · ${g.prop.peak.toLocaleString()}W peak` : '');
+  const ratings = `${ic('gas')} ${g.gas.running.toLocaleString()}W · ${g.gas.peak.toLocaleString()}W peak`
+    + (g.prop ? ` &nbsp;·&nbsp; ${ic('propane')} ${g.prop.running.toLocaleString()}W · ${g.prop.peak.toLocaleString()}W peak` : '');
   return `
     <div class="card gen-card">
       <div class="gen-card-top">
@@ -1076,6 +1103,19 @@ function buildCalculatorHTML() {
   const other    = APPLIANCES.filter(a => a.group === 'other');
 
   return `
+    ${!state.welcomeDismissed ? `
+    <div class="card onboard-card" id="onboard-card">
+      <div class="onboard-head">
+        <span class="onboard-title">New to GPA? Three steps</span>
+        <button class="onboard-dismiss" onclick="dismissWelcome()">Got it</button>
+      </div>
+      <ol class="onboard-steps">
+        <li><span class="onboard-num">1</span><div><strong>Confirm your generator</strong><span>Tap <em>Change</em> to pick your exact model.</span></div></li>
+        <li><span class="onboard-num">2</span><div><strong>Choose what you're running</strong><span>Use a preset, or toggle appliances below.</span></div></li>
+        <li><span class="onboard-num">3</span><div><strong>Read the verdict</strong><span>Safe, Near Capacity, or Unsafe — with what to change.</span></div></li>
+      </ol>
+    </div>` : ''}
+
     ${buildGeneratorCard()}
 
     <!-- Verdict-first summary -->
@@ -1092,7 +1132,7 @@ function buildCalculatorHTML() {
 
       <!-- Recommended action (shown for Near / Unsafe) -->
       <div class="verdict-action" id="verdict-action" style="display:none">
-        <span class="verdict-action-icon" aria-hidden="true">→</span>
+        <span class="verdict-action-icon" aria-hidden="true">${ic('arrow')}</span>
         <div class="verdict-action-body">
           <div class="verdict-action-text" id="verdict-action-text"></div>
           <button class="verdict-action-btn" id="verdict-action-btn" style="display:none"></button>
@@ -1116,14 +1156,6 @@ function buildCalculatorHTML() {
         <summary>What this is based on</summary>
         <div class="verdict-basis-body" id="verdict-basis-body"></div>
       </details>
-    </div>
-
-    <div class="strategy-note">
-      <div class="strategy-header">
-        <h2>Recommended Operating Strategy</h2>
-      </div>
-      <p><strong>Normal mode:</strong> A/C Cooling + Refrigerator + Starlink + USB + TV</p>
-      <p><strong>Temporary high-load mode:</strong> Switch A/C to Fan Only before running microwave, toaster, coffee maker, hair dryer, or clothes iron.</p>
     </div>
 
     <!-- Presets -->
@@ -2390,17 +2422,17 @@ function computeStatus() {
 function buildLandingStatus() {
   const { running, lim, fuelName } = computeStatus();
   const label = lim.status === 'good' ? 'Safe' : lim.status === 'near' ? 'Near Capacity' : 'Unsafe';
-  const icon  = lim.status === 'good' ? '✅' : lim.status === 'near' ? '⚠️' : '⛔';
+  const iconName = lim.status === 'good' ? 'check' : lim.status === 'near' ? 'alert' : 'ban';
   const remain = lim.runHead;
   const headroom = remain >= 0
     ? `<strong>${remain.toLocaleString()}W</strong> headroom`
     : `<strong>${Math.abs(remain).toLocaleString()}W</strong> over`;
   const confirmed = getComboEvidence(fuelName).confirmedLim
-    ? ` · <span class="land-status-tested">✓ you've run this</span>` : '';
+    ? ` · <span class="land-status-tested">${ic('check')} you've run this</span>` : '';
   return `
     <div class="card land-status v-${lim.status}">
       <div class="land-status-row">
-        <span class="verdict-pill v-${lim.status}"><span aria-hidden="true">${icon}</span> ${label}</span>
+        <span class="verdict-pill v-${lim.status}">${ic(iconName)} ${label}</span>
         <button class="land-status-link" onclick="showTab('calc')">${lim.status === 'good' ? 'Adjust load' : 'What to change'} ›</button>
       </div>
       <div class="land-status-detail">Estimated load <strong>${running.toLocaleString()}W</strong> · ${headroom} on ${fuelName}${confirmed}</div>
@@ -2420,9 +2452,9 @@ function buildHomeHero() {
       <h2 class="gpa-hero-title">Know what you can safely run.</h2>
       <p class="gpa-hero-sub">Your generator's real-world capacity — accounting for startup surge, elevation, and fuel — turned into clear, confident decisions. No signal required.</p>
       <div class="gpa-hero-metrics">
-        <span class="gpa-hero-chip">⚡ <b>Dual-fuel</b> aware</span>
-        <span class="gpa-hero-chip">⛰️ <b>Elevation</b> derated</span>
-        <span class="gpa-hero-chip">📶 Works <b>offline</b></span>
+        <span class="gpa-hero-chip">${ic('bolt')} <b>Dual-fuel</b> aware</span>
+        <span class="gpa-hero-chip">${ic('mountain')} <b>Elevation</b> derated</span>
+        <span class="gpa-hero-chip">${ic('wifiOff')} Works <b>offline</b></span>
       </div>
     </div>`;
 }
@@ -2478,17 +2510,6 @@ function renderFuelTrackerTab() {
   panel.innerHTML = `
     <!-- Answer-first status strip (mirrors the Calculator verdict) -->
     ${buildLandingStatus()}
-
-    <!-- Welcome banner (first-time only) -->
-    ${!state.welcomeDismissed ? `
-    <div class="welcome-banner" id="welcome-banner">
-      <div class="welcome-body">
-        <div class="welcome-title">👋 Welcome to Generator Power Advisor</div>
-        <p class="welcome-sub">Advising on your <strong>${escHtml(gen.short)}</strong> (${escHtml(gen.kind)}). Change it any time from the <em>Calculator</em> tab.</p>
-        <p class="welcome-sub" style="margin-top:4px;"><strong>Recommended workflow:</strong> Choose a preset on the <em>Calculator</em> tab, then come back here to check runtime.</p>
-      </div>
-      <button class="welcome-dismiss" onclick="dismissWelcome()">Got it ✓</button>
-    </div>` : ''}
 
     <!-- Quick Start -->
     ${buildQuickStartCard()}
@@ -2940,7 +2961,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   renderCalculator();  // also sets warnings via renderCalculator
   renderPresetButtons();
-  showTab('ftracker');
+  showTab('calc');     // Calculator is the primary surface — land here first
   window.scrollTo(0, 0);
 
   // Service Worker

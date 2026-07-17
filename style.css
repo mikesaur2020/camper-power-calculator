@@ -1971,3 +1971,35 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
 
 /* Landing strip confirmed marker */
 .land-status-tested { color: var(--good); font-weight: 700; }
+
+/* ── Inline SVG icon system (Phase B) ── */
+.ic { width: 1.05em; height: 1.05em; display: inline-block; vertical-align: -0.16em; flex: 0 0 auto; }
+.verdict-pill .ic { width: 1.05em; height: 1.05em; vertical-align: -0.15em; }
+.vchip .ic, .gen-fuel-badge .ic, .gpa-hero-chip .ic, .gen-card-ratings .ic { width: 1em; height: 1em; }
+/* Nav icons */
+nav button .ic { width: 15px; height: 15px; vertical-align: -0.18em; margin-right: 6px; opacity: 0.9; }
+nav button.active .ic { opacity: 1; }
+/* Evidence check uses a filled circle badge, keep emoji-free */
+
+/* ── First-run onboarding card (Phase B) ── */
+.onboard-card { border: 1px solid color-mix(in srgb, var(--brand) 26%, transparent); background: var(--brand-tint); }
+.onboard-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.onboard-title { font-size: 0.9rem; font-weight: 750; color: var(--text); }
+.onboard-dismiss {
+  background: transparent; border: 1px solid color-mix(in srgb, var(--brand) 40%, transparent);
+  color: var(--brand-text); border-radius: 8px; font-size: 0.74rem; font-weight: 700; padding: 5px 12px; cursor: pointer;
+}
+.onboard-dismiss:hover { background: var(--brand-tint-2); }
+.onboard-steps { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+.onboard-steps li { display: flex; align-items: flex-start; gap: 11px; }
+.onboard-num {
+  flex: 0 0 auto; width: 24px; height: 24px; border-radius: 50%;
+  background: var(--brand); color: #fff; font-size: 0.78rem; font-weight: 800;
+  display: grid; place-items: center; margin-top: 1px;
+}
+.onboard-steps li div { display: flex; flex-direction: column; }
+.onboard-steps strong { font-size: 0.85rem; font-weight: 650; color: var(--text); }
+.onboard-steps span { font-size: 0.76rem; color: var(--text-muted); line-height: 1.4; }
+
+/* Nav icon spacing polish */
+nav button { display: inline-flex; align-items: center; }
