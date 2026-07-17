@@ -1938,3 +1938,36 @@ input:focus-visible, textarea:focus-visible, select:focus-visible {
 
 .gen-card-source { display: flex; align-items: center; gap: 7px; font-size: 0.68rem; color: var(--text-faint); margin-top: 9px; }
 .gen-card-source .basis-dot { margin-top: 0; }
+
+/* ── Real-world evidence / Confirmed tier (Option A) ── */
+.conf-confirmed { color: var(--good); background: var(--good-tint); border-color: color-mix(in srgb, var(--good) 40%, transparent); }
+
+.verdict-evidence { margin-top: 14px; }
+.verdict-evidence.ev-confirmed {
+  display: flex; align-items: center; gap: 9px;
+  background: var(--good-tint); border: 1px solid color-mix(in srgb, var(--good) 30%, transparent);
+  border-radius: var(--radius-sm); padding: 10px 13px;
+  font-size: 0.8rem; color: var(--text); line-height: 1.45;
+}
+.verdict-evidence.ev-confirmed .ev-icon {
+  flex: 0 0 auto; width: 20px; height: 20px; border-radius: 50%;
+  background: var(--good); color: #fff; display: grid; place-items: center;
+  font-size: 0.72rem; font-weight: 800;
+}
+.verdict-evidence.ev-confirmed strong { font-weight: 700; }
+.verdict-evidence.ev-log {
+  background: var(--surface2); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); padding: 11px 13px;
+}
+.ev-lead { font-size: 0.78rem; color: var(--text-muted); line-height: 1.45; margin-bottom: 9px; }
+.ev-lead strong { color: var(--text); }
+.ev-btns { display: flex; flex-wrap: wrap; gap: 7px; }
+.ev-btn {
+  background: var(--surface3); border: 1px solid var(--border-strong); color: var(--text);
+  border-radius: var(--pill); font-size: 0.74rem; font-weight: 650; padding: 6px 13px; cursor: pointer;
+  transition: border-color .15s, color .15s;
+}
+.ev-btn:hover { border-color: var(--good); color: var(--good); }
+
+/* Landing strip confirmed marker */
+.land-status-tested { color: var(--good); font-weight: 700; }

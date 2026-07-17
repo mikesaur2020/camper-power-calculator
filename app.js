@@ -564,12 +564,19 @@ function populateVerdict(running, peak, maxSurge, derated, gas, prop) {
                  : '<span aria-hidden="true">⛔</span> Unsafe';
   pill.className = 'verdict-pill ' + cls;
 
-  // Confidence in the recommendation (honest: lower near the boundary or when
-  // elevation derating — an estimate — is heavy).
-  const conf = verdictConfidence(lim, derated);
+  // Real-world evidence for the current combination (raises confidence to Confirmed).
+  const ev = getComboEvidence(limName);
+
+  // Confidence: a logged real-world result on the limiting fuel is the highest tier;
+  // otherwise it's lower near the boundary or when derating (an estimate) is heavy.
+  const conf = ev.confirmedLim
+    ? { level: 'Confirmed', cls: 'conf-confirmed' }
+    : verdictConfidence(lim, derated);
   const confEl = document.getElementById('verdict-conf');
   confEl.className = 'verdict-conf ' + conf.cls;
-  confEl.textContent = conf.level + ' confidence';
+  confEl.innerHTML = ev.confirmedLim
+    ? '<span aria-hidden="true">✓</span> Confirmed'
+    : conf.level + ' confidence';
 
   document.getElementById('verdict-fuel').innerHTML =
     `on ${limName} · ${limDer.running.toLocaleString()}W est. limit`;
@@ -622,8 +629,16 @@ function populateVerdict(running, peak, maxSurge, derated, gas, prop) {
     ? `Elevation <b>${state.elevation.toLocaleString()} ft</b> · −${deratePct}% est.`
     : `Elevation <b>sea level</b> · no derate`;
 
+  // Real-world evidence row (confirm / log that this combination actually ran).
+  renderVerdictEvidence(ev, limName);
+
   // "What this is based on" — data provenance / transparency.
   const src = genSource();
+  const realWorld = ev.confirmedLim
+    ? `Confirmed — you've run this on ${limName}`
+    : ev.confirmedOther
+    ? `Logged on ${ev.otherFuel}; confirm on ${limName} to raise confidence`
+    : `Not yet logged — mark it below once you've run it`;
   document.getElementById('verdict-basis-body').innerHTML = `
     <div class="basis-row"><span class="basis-dot basis-spec" aria-hidden="true"></span>
       <span><strong>Generator ratings</strong> — ${escHtml(currentGen().short)}, ${src.label}</span></div>
@@ -631,8 +646,33 @@ function populateVerdict(running, peak, maxSurge, derated, gas, prop) {
       <span><strong>Appliance loads</strong> — estimated typical watts, from your on/off selection</span></div>
     <div class="basis-row"><span class="basis-dot basis-est" aria-hidden="true"></span>
       <span><strong>Elevation derating</strong> — estimated (~3.5% per 1,000 ft)${state.elevation > 0 ? `, −${deratePct}% applied` : ''}</span></div>
-    <div class="basis-row"><span class="basis-dot basis-obs" aria-hidden="true"></span>
-      <span><strong>Real-world results</strong> — log combinations on the Real-World Tests tab to raise confidence</span></div>`;
+    <div class="basis-row"><span class="basis-dot ${ev.confirmedLim ? 'basis-spec' : 'basis-obs'}" aria-hidden="true"></span>
+      <span><strong>Real-world results</strong> — ${realWorld}</span></div>`;
+}
+
+// Render the verdict's evidence row: a green confirmation, a nudge to confirm on the
+// active fuel, or a one-tap way to log that the current combination actually ran.
+function renderVerdictEvidence(ev, limName) {
+  const el = document.getElementById('verdict-evidence');
+  if (!el) return;
+  const gasOnly = !genHasPropane();
+  if (ev.confirmedLim) {
+    el.className = 'verdict-evidence ev-confirmed';
+    el.innerHTML = `<span class="ev-icon" aria-hidden="true">✓</span>
+      <span>You've run this combination on <strong>${limName}</strong> — logged in Real-World Tests.</span>`;
+    return;
+  }
+  // Fuel buttons for logging (limited to what the generator supports).
+  const btns = gasOnly
+    ? `<button class="ev-btn" onclick="logCombo('gas')">Ran on gasoline</button>`
+    : `<button class="ev-btn" onclick="logCombo('propane')">Ran on propane</button>
+       <button class="ev-btn" onclick="logCombo('gas')">Ran on gasoline</button>
+       <button class="ev-btn" onclick="logCombo('both')">Both</button>`;
+  const lead = ev.confirmedOther
+    ? `You've logged this on <strong>${ev.otherFuel}</strong>. Confirm it on ${limName}?`
+    : `Have you actually run this combination? Log it to confirm the estimate:`;
+  el.className = 'verdict-evidence ev-log';
+  el.innerHTML = `<div class="ev-lead">${lead}</div><div class="ev-btns">${btns}</div>`;
 }
 
 // Provenance of the selected generator's ratings.
@@ -713,6 +753,51 @@ function applyFanRecommendation() {
   const f = document.getElementById('toggle-ac_fan');  if (f) f.checked = true;
   saveState();
   renderCalculator();
+}
+
+// ── Real-world evidence: match the current combination to logged results ──────
+function currentApplianceIds() {
+  return APPLIANCES.filter(a => state.appliances[a.id]).map(a => a.id);
+}
+function applianceKey(ids) {
+  return (ids || []).slice().sort().join('|');
+}
+function comboLabel(ids) {
+  return ids.map(id => (APPLIANCES.find(a => a.id === id) || {}).name).filter(Boolean).join(' + ');
+}
+// A structured test logged for the *current* appliance set + selected generator.
+function loggedTestForCurrent() {
+  const key = applianceKey(currentApplianceIds());
+  return (state.tests || []).find(t =>
+    Array.isArray(t.appliances) && applianceKey(t.appliances) === key && t.generatorId === state.generatorId);
+}
+// Evidence summary for the verdict. limFuel is 'propane' | 'gasoline'.
+function getComboEvidence(limFuel) {
+  const t = loggedTestForCurrent();
+  const confirmedOn = fuel => !!(t && ((fuel === 'propane' && t.prop) || (fuel === 'gasoline' && t.gas)));
+  const otherFuel = limFuel === 'propane' ? 'gasoline' : 'propane';
+  return {
+    logged: !!t,
+    confirmedLim: confirmedOn(limFuel),
+    confirmedOther: confirmedOn(otherFuel),
+    otherFuel,
+  };
+}
+// Record that the current combination actually ran on the given fuel(s).
+function logCombo(fuel) {
+  const ids = currentApplianceIds();
+  const key = applianceKey(ids);
+  let t = (state.tests || []).find(x =>
+    Array.isArray(x.appliances) && applianceKey(x.appliances) === key && x.generatorId === state.generatorId);
+  if (!t) {
+    t = { loads: comboLabel(ids), appliances: ids, generatorId: state.generatorId, gas: false, prop: false, notes: '' };
+    state.tests.push(t);
+  }
+  if (fuel === 'gas' || fuel === 'both') t.gas = true;
+  if (fuel === 'propane' || fuel === 'both') t.prop = true;
+  saveState();
+  renderCalculator();
+  renderTests();
 }
 
 // ── Generator selection ───────────────────────────────────────────────────────
@@ -1023,6 +1108,9 @@ function buildCalculatorHTML() {
         <span class="vchip" id="vchip-surge">—</span>
         <span class="vchip" id="vchip-derate">—</span>
       </div>
+
+      <!-- Real-world evidence: confirm or log that this combination actually ran -->
+      <div class="verdict-evidence" id="verdict-evidence"></div>
 
       <details class="verdict-basis">
         <summary>What this is based on</summary>
@@ -2307,13 +2395,15 @@ function buildLandingStatus() {
   const headroom = remain >= 0
     ? `<strong>${remain.toLocaleString()}W</strong> headroom`
     : `<strong>${Math.abs(remain).toLocaleString()}W</strong> over`;
+  const confirmed = getComboEvidence(fuelName).confirmedLim
+    ? ` · <span class="land-status-tested">✓ you've run this</span>` : '';
   return `
     <div class="card land-status v-${lim.status}">
       <div class="land-status-row">
         <span class="verdict-pill v-${lim.status}"><span aria-hidden="true">${icon}</span> ${label}</span>
         <button class="land-status-link" onclick="showTab('calc')">${lim.status === 'good' ? 'Adjust load' : 'What to change'} ›</button>
       </div>
-      <div class="land-status-detail">Estimated load <strong>${running.toLocaleString()}W</strong> · ${headroom} on ${fuelName}</div>
+      <div class="land-status-detail">Estimated load <strong>${running.toLocaleString()}W</strong> · ${headroom} on ${fuelName}${confirmed}</div>
     </div>`;
 }
 
@@ -2771,6 +2861,7 @@ function toggleTheme() {
 // ── Boot ──────────────────────────────────────────────────────────────────────
 window.toggleTheme = toggleTheme;
 window.applyFanRecommendation = applyFanRecommendation;
+window.logCombo = logCombo;
 window.openGenPicker = openGenPicker;
 window.closeGenPicker = closeGenPicker;
 window.renderGenModal = renderGenModal;
