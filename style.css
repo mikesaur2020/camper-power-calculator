@@ -2036,3 +2036,7 @@ nav button { display: inline-flex; align-items: center; }
 .ft-combo-icon .ic { width: 1.15rem; height: 1.15rem; }
 .wf-icon .ic { width: 1.35rem; height: 1.35rem; }
 .shore-rec-icon .ic { width: 1.4rem; height: 1.4rem; }
+
+/* ── Privacy screen link ── */
+.privacy-policy-link { color: var(--brand-text); font-weight: 650; text-decoration: none; }
+.privacy-policy-link:hover { text-decoration: underline; }

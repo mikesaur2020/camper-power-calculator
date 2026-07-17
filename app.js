@@ -1793,9 +1793,9 @@ function buildAboutHTML() {
           cabins, farms, tailgating, and off-grid living</strong>. Works fully offline and installs to your home screen.
         </p>
         <p style="font-size:0.75rem;color:var(--text-faint);line-height:1.6;margin-top:8px;">
-          Now advising on your <strong>${escHtml(g.short)}</strong>. Change or add a generator from the
-          Calculator tab. The appliance profile below is the current default; saved profiles for other
-          setups (home backup, job site, and more) are on the roadmap.
+          Now advising on your <strong>${escHtml(g.short)}</strong>. Change or add a generator any time from the
+          Calculator tab, and toggle exactly what you're running. The equipment below is the default profile
+          used for the estimates.
         </p>
       </div>
     </div>
@@ -1842,6 +1842,25 @@ function buildAboutHTML() {
         </p>
       </div>
     </div>` : ''}
+
+    <div class="card">
+      <div class="about-section">
+        <h3>Privacy</h3>
+        <p style="font-size:0.8rem;color:var(--text-muted);line-height:1.6;">
+          Generator Power Advisor is designed to respect your privacy.
+        </p>
+        <ul class="guidance-list" style="margin-top:8px;">
+          <li><span>${ic('check')}</span><span>Your preferences, saved generators, and logged results are stored <strong>locally on this device</strong> — not on any server.</span></li>
+          <li><span>${ic('check')}</span><span><strong>No account is required.</strong> No sign-in, email, or personal profile is collected.</span></li>
+          <li><span>${ic('check')}</span><span>No personal information is <strong>sold</strong>, and there is no advertising or tracking.</span></li>
+          <li><span>${ic('check')}</span><span>If you use a location feature, your location is requested <strong>only to improve environmental calculations</strong> (elevation and tonight's forecast). It is <strong>never used for advertising or tracking.</strong></span></li>
+        </ul>
+        <p style="font-size:0.75rem;line-height:1.6;margin-top:10px;">
+          <!-- RELEASE: replace the href below with the production Privacy Policy URL before store submission -->
+          <a class="privacy-policy-link" href="https://generator-power-advisor.app/privacy" target="_blank" rel="noopener">Read the full Privacy Policy →</a>
+        </p>
+      </div>
+    </div>
 
     <div class="card">
       <div class="disclaimer">
